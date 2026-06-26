@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { FilterParams, LeadsDashboardData } from '@/api/types'
+import { DASHBOARD_SYNC_MS } from '@/lib/syncConfig'
 
 async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData> {
   const params = new URLSearchParams({
@@ -31,8 +32,8 @@ export function useLeadsData(
     enabled: Boolean(merged?.dateFrom && merged?.dateTo),
     queryFn: () => fetchDashboard(merged!),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
-    refetchInterval: 1000 * 60 * 5,
+    staleTime: DASHBOARD_SYNC_MS,
+    refetchInterval: DASHBOARD_SYNC_MS,
     retry: 2,
     retryDelay: 5000,
   })

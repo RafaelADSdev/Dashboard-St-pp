@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
 import type { FilterParams } from '@/api/types'
+import { DASHBOARD_SYNC_SECONDS } from '@/lib/syncConfig'
 import { buildDashboardData } from './buildDashboardData'
 
 export function getCachedDashboard(filters: FilterParams) {
@@ -13,6 +14,6 @@ export function getCachedDashboard(filters: FilterParams) {
       filters.diretoria,
       filters.equipe,
     ],
-    { revalidate: 60 * 5 }
+    { revalidate: DASHBOARD_SYNC_SECONDS }
   )()
 }

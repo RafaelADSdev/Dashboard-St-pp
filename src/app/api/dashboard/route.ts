@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import type { FilterParams } from '@/api/types'
+import { DASHBOARD_SYNC_SECONDS } from '@/lib/syncConfig'
 import { getCachedDashboard } from '@/lib/server/getCachedDashboard'
 
 export const dynamic = 'force-dynamic'
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     const data = await getCachedDashboard(filters)
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
+        'Cache-Control': `private, max-age=${DASHBOARD_SYNC_SECONDS}, stale-while-revalidate=${DASHBOARD_SYNC_SECONDS}`,
       },
     })
   } catch (error) {

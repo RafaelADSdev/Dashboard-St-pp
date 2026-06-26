@@ -238,7 +238,7 @@ Exemplo:
 GET /api/dashboard?dateFrom=2026-06-01&dateTo=2026-06-26&esteira=TODAS&diretoria=&equipe=
 ```
 
-- Cache: **5 minutos** (por combinação de filtros)
+- Cache: **10 segundos** (por combinação de filtros)
 
 ### `POST/GET /api/bitrix/*`
 
@@ -265,10 +265,11 @@ Na primeira visita, o período padrão (**últimos 7 dias**) já é aplicado aut
 | API única | Uma requisição HTTP do cliente por carregamento |
 | Cache de org | Departamentos + usuários cacheados por 24h |
 | Cache de fases | Labels do funil cacheados por 24h |
-| Cache de dashboard | Resposta agregada cacheada por 5 min |
+| Cache de dashboard | Resposta agregada cacheada por **10 segundos** |
 | Filtro no Bitrix | `ASSIGNED_BY_ID` enviado na query quando há filtro de diretoria/equipe |
 | Prefetch | Estrutura org carregada em background ao abrir o app |
 | `keepPreviousData` | Dados anteriores visíveis enquanto novos filtros carregam |
+| Atualização automática | Dados do dashboard recarregados a cada **10 segundos** |
 
 ---
 
