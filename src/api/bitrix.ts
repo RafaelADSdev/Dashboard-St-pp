@@ -201,7 +201,7 @@ export async function fetchLeadsFromBitrix(
       hasMore = false
     } else {
       start += PAGE_SIZE
-      await sleep(300)
+      await sleep(150)
     }
   }
 

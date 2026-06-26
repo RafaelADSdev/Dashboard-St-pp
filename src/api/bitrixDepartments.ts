@@ -95,7 +95,7 @@ async function fetchAllPages<T>(
 
     if (data.next === undefined) break
     start = data.next
-    await sleep(200)
+    await sleep(100)
   }
 
   return all

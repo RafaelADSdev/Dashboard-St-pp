@@ -21,7 +21,16 @@ export function Providers({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     initDates()
-  }, [initDates])
+    void queryClient.prefetchQuery({
+      queryKey: ['stupp-org'],
+      queryFn: async () => {
+        const res = await fetch('/api/org')
+        if (!res.ok) throw new Error('Erro ao carregar estrutura')
+        return res.json()
+      },
+      staleTime: 1000 * 60 * 60 * 24,
+    })
+  }, [initDates, queryClient])
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }
