@@ -2,7 +2,16 @@ import { useFilterStore } from '@/store/filterStore'
 import { filterInputClass, filterLabelClass } from '@/components/ui/styles'
 
 export function DateRangeFilter() {
-  const { dateFrom, dateTo, setDateFrom, setDateTo } = useFilterStore()
+  const { dateFrom, dateTo, setDateFrom, setDateTo, datesReady } = useFilterStore()
+
+  if (!datesReady) {
+    return (
+      <div className="flex gap-3">
+        <div className="h-9 w-36 rounded-lg bg-slate-100 animate-pulse" />
+        <div className="h-9 w-36 rounded-lg bg-slate-100 animate-pulse" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-wrap items-end gap-3">

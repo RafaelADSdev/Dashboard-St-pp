@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Plus_Jakarta_Sans } from 'next/font/google'
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { Providers } from './providers'
+import { RootShell } from './RootShell'
 import '../index.css'
 
 const jakarta = Plus_Jakarta_Sans({
@@ -18,11 +17,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="pt-BR" className={jakarta.variable}>
-      <body className="antialiased">
-        <Providers>
-          <DashboardLayout>{children}</DashboardLayout>
-        </Providers>
+    <html lang="pt-BR" className={jakarta.variable} suppressHydrationWarning>
+      <body className="font-sans antialiased" suppressHydrationWarning>
+        <RootShell>{children}</RootShell>
       </body>
     </html>
   )

@@ -18,6 +18,7 @@ import { getEquipeOptions, resolveAssignedByIds } from '@/hooks/useStuppOrg'
 export function useLeadsData(filters: FilterParams) {
   return useQuery({
     queryKey: ['leads', filters],
+    enabled: Boolean(filters.dateFrom && filters.dateTo),
     queryFn: async (): Promise<LeadsDashboardData> => {
       const webhookUrl = getBitrixWebhookUrl()
       const categoryIds = getCategoryIdsForEsteira(filters.esteira)

@@ -1,7 +1,8 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { useFilterStore } from '@/store/filterStore'
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -15,6 +16,12 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       })
   )
+
+  const initDates = useFilterStore((s) => s.initDates)
+
+  useEffect(() => {
+    initDates()
+  }, [initDates])
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }

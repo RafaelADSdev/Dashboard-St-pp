@@ -17,6 +17,7 @@ dist-ssr
 tsconfig.tsbuildinfo
 
 # Editor directories and files
+.cursor
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -26,3 +27,6 @@ tsconfig.tsbuildinfo
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Building2, LayoutDashboard, TrendingUp } from 'lucide-react'
@@ -17,8 +18,17 @@ export function Sidebar() {
   return (
     <aside className="w-[260px] shrink-0 bg-white min-h-screen flex flex-col border-r border-slate-200">
       <div className="p-6 border-b border-slate-100">
-        <h1 className="text-xl font-bold text-blue-950 tracking-tight">Stüpp</h1>
-        <p className="text-xs font-medium text-blue-800/70 mt-0.5">Superintendência</p>
+        <Link href="/" className="block">
+          <Image
+            src="/stupp-logo.png"
+            alt="Superintendência Stüpp"
+            width={140}
+            height={40}
+            priority
+            className="h-9 w-auto"
+          />
+          <p className="text-xs font-medium text-blue-800/70 mt-2">Superintendência</p>
+        </Link>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
