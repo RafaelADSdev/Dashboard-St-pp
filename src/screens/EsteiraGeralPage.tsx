@@ -1,8 +1,9 @@
 'use client'
 
-import { useFilterStore } from '@/store/filterStore'
+import { useAppliedFilters } from '@/store/filterStore'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { DiretoriaFilter } from '@/components/filters/DiretoriaFilter'
+import { ApplyFiltersButton } from '@/components/filters/ApplyFiltersButton'
 import { EquipeFilter } from '@/components/filters/EquipeFilter'
 import { PipelineFunnelChart } from '@/components/charts/PipelineFunnelChart'
 import { LeadsByStageChart } from '@/components/charts/LeadsByStageChart'
@@ -16,8 +17,8 @@ import { ChartCard } from '@/components/ui/ChartCard'
 import { ErrorState, LoadingState } from '@/components/ui/StatusMessage'
 
 export function EsteiraGeralPage() {
-  const filters = useFilterStore()
-  const { data, isLoading, isError } = useLeadsData({ ...filters, esteira: 'GERAL' })
+  const applied = useAppliedFilters()
+  const { data, isLoading, isError } = useLeadsData(applied, { esteira: 'GERAL' })
 
   if (isLoading) {
     return (
@@ -47,6 +48,7 @@ export function EsteiraGeralPage() {
         <DateRangeFilter />
         <DiretoriaFilter />
         <EquipeFilter />
+        <ApplyFiltersButton ignoreEsteira />
       </FilterPanel>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">

@@ -20,11 +20,16 @@ async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData
   return res.json()
 }
 
-export function useLeadsData(filters: FilterParams) {
+export function useLeadsData(
+  filters: FilterParams | null,
+  overrides?: Partial<FilterParams>
+) {
+  const merged = filters ? { ...filters, ...overrides } : null
+
   return useQuery({
-    queryKey: ['leads', filters],
-    enabled: Boolean(filters.dateFrom && filters.dateTo),
-    queryFn: () => fetchDashboard(filters),
+    queryKey: ['leads', merged],
+    enabled: Boolean(merged?.dateFrom && merged?.dateTo),
+    queryFn: () => fetchDashboard(merged!),
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
     refetchInterval: 1000 * 60 * 5,

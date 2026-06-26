@@ -1,9 +1,10 @@
 'use client'
 
-import { useFilterStore } from '@/store/filterStore'
+import { useAppliedFilters } from '@/store/filterStore'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { EsteiraFilter } from '@/components/filters/EsteiraFilter'
 import { DiretoriaFilter } from '@/components/filters/DiretoriaFilter'
+import { ApplyFiltersButton } from '@/components/filters/ApplyFiltersButton'
 import { EquipeFilter } from '@/components/filters/EquipeFilter'
 import { LeadsByTeamPanel } from '@/components/charts/LeadsByTeamPanel'
 import { LeadsByStageChart } from '@/components/charts/LeadsByStageChart'
@@ -18,8 +19,8 @@ import { ChartCard } from '@/components/ui/ChartCard'
 import { ErrorState, LoadingState } from '@/components/ui/StatusMessage'
 
 export function DashboardPage() {
-  const filters = useFilterStore()
-  const { data, isLoading, isError, error } = useLeadsData(filters)
+  const applied = useAppliedFilters()
+  const { data, isLoading, isError, error } = useLeadsData(applied)
 
   if (isLoading) {
     return (
@@ -54,6 +55,7 @@ export function DashboardPage() {
         <EsteiraFilter />
         <DiretoriaFilter />
         <EquipeFilter />
+        <ApplyFiltersButton />
       </FilterPanel>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

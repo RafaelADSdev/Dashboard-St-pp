@@ -3,7 +3,7 @@ import { useFilterStore } from '@/store/filterStore'
 import { filterLabelClass, filterSelectClass } from '@/components/ui/styles'
 
 export function DiretoriaFilter() {
-  const { diretoria, setDiretoria, setEquipe } = useFilterStore()
+  const { diretoria, setDiretoria } = useFilterStore()
   const { data, isLoading } = useStuppStructurePreview()
 
   return (
@@ -13,7 +13,6 @@ export function DiretoriaFilter() {
         value={diretoria}
         onChange={(e) => {
           setDiretoria(e.target.value)
-          setEquipe('')
         }}
         disabled={isLoading}
         className={`${filterSelectClass} min-w-[180px]`}
