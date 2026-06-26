@@ -18,11 +18,11 @@ export function FilterApplyingOverlay({
 
       {isActive && (
         <div
-          className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-white/75 backdrop-blur-[2px]"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/20 backdrop-blur-[1px] pointer-events-none"
           aria-live="polite"
           aria-busy="true"
         >
-          <div className="flex flex-col items-center gap-3 rounded-xl border border-blue-100 bg-white px-6 py-5 shadow-lg animate-[fadeIn_0.2s_ease-out]">
+          <div className="pointer-events-auto flex flex-col items-center gap-3 rounded-xl border border-blue-100 bg-white px-6 py-5 shadow-xl animate-[fadeIn_0.2s_ease-out]">
             <div className="relative flex h-10 w-10 items-center justify-center">
               <span className="absolute inset-0 rounded-full border-2 border-blue-100" />
               <span className="absolute inset-0 rounded-full border-2 border-blue-800 border-t-transparent animate-spin" />

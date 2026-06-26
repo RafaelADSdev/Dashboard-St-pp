@@ -20,8 +20,8 @@ import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
 
 export function EsteiraGeralPage() {
   const applied = useAppliedFilters()
-  const { data, isLoading, isFetching, isError } = useLeadsData(applied, { esteira: 'GERAL' })
-  const isApplyingFilters = useFilterApplyFeedback(isFetching)
+  const { data, isLoading, isFetching, isPending, isError } = useLeadsData(applied, { esteira: 'GERAL' })
+  const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
 
   if (isLoading && !data) {
     return (

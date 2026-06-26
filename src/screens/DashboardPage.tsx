@@ -22,8 +22,8 @@ import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
 
 export function DashboardPage() {
   const applied = useAppliedFilters()
-  const { data, isLoading, isFetching, isError, error } = useLeadsData(applied)
-  const isApplyingFilters = useFilterApplyFeedback(isFetching)
+  const { data, isLoading, isFetching, isPending, isError, error } = useLeadsData(applied)
+  const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
 
   if (isLoading && !data) {
     return (
