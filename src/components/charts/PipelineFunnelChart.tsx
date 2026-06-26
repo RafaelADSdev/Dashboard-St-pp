@@ -11,7 +11,9 @@ interface Props {
 const FUNNEL_COLORS = ['#f59e0b', '#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#22c55e', '#ef4444']
 
 export function PipelineFunnelChart({ data }: Props) {
-  if (data.length === 0) {
+  const chartData = data.filter((item) => item.y > 0)
+
+  if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-[280px] text-sm text-slate-400">
         Nenhum dado no período selecionado
@@ -19,7 +21,7 @@ export function PipelineFunnelChart({ data }: Props) {
     )
   }
 
-  const chartHeight = Math.max(280, data.length * 40)
+  const chartHeight = Math.max(220, chartData.length * 48)
 
   return (
     <ReactApexChart
@@ -49,7 +51,7 @@ export function PipelineFunnelChart({ data }: Props) {
           yaxis: { lines: { show: false } },
         },
         xaxis: {
-          categories: data.map((d) => d.x),
+          categories: chartData.map((d) => d.x),
           labels: { style: { colors: '#64748b', fontSize: '12px' } },
           axisBorder: { show: false },
           axisTicks: { show: false },
@@ -67,7 +69,7 @@ export function PipelineFunnelChart({ data }: Props) {
         },
         legend: { show: false },
       }}
-      series={[{ name: 'Leads', data: data.map((d) => d.y) }]}
+      series={[{ name: 'Leads', data: chartData.map((d) => d.y) }]}
     />
   )
 }

@@ -59,6 +59,8 @@ interface FilterState extends FilterValues {
   initDates: () => void
   resetFilters: () => void
   hasPendingChanges: (ignoreEsteira?: boolean) => boolean
+  isApplying: boolean
+  setApplying: (value: boolean) => void
 }
 
 export const useFilterStore = create<FilterState>((set, get) => ({
@@ -69,6 +71,8 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   esteira: 'TODAS',
   datesReady: false,
   applied: null,
+  isApplying: false,
+  setApplying: (value) => set({ isApplying: value }),
   setDateFrom: (v) => set({ dateFrom: v }),
   setDateTo: (v) => set({ dateTo: v }),
   setDiretoria: (v) => set({ diretoria: v, equipe: '' }),
@@ -76,7 +80,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   setEsteira: (v) => set({ esteira: v }),
   applyFilters: () => {
     const draft = pickDraft(get())
-    set({ applied: draft })
+    set({ applied: draft, isApplying: true })
   },
   initDates: () => {
     const defaults = defaultFilters()

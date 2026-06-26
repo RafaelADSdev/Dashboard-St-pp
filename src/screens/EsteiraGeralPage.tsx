@@ -14,13 +14,16 @@ import { PageShell } from '@/components/ui/PageShell'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { FilterPanel } from '@/components/ui/FilterPanel'
 import { ChartCard } from '@/components/ui/ChartCard'
+import { FilterApplyingOverlay } from '@/components/ui/FilterApplyingOverlay'
 import { ErrorState, LoadingState } from '@/components/ui/StatusMessage'
+import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
 
 export function EsteiraGeralPage() {
   const applied = useAppliedFilters()
-  const { data, isLoading, isError } = useLeadsData(applied, { esteira: 'GERAL' })
+  const { data, isLoading, isFetching, isError } = useLeadsData(applied, { esteira: 'GERAL' })
+  const isApplyingFilters = useFilterApplyFeedback(isFetching)
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <PageShell>
         <LoadingState />
@@ -51,6 +54,8 @@ export function EsteiraGeralPage() {
         <ApplyFiltersButton ignoreEsteira />
       </FilterPanel>
 
+      <FilterApplyingOverlay isActive={isApplyingFilters}>
+        <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
         <KPICard label="Total no período" value={data?.totalLeads ?? 0} color="brand" />
         <KPICard label="Comercial Geral" value={data?.geralCount ?? 0} color="emerald" />
@@ -68,6 +73,8 @@ export function EsteiraGeralPage() {
       <ChartCard title="Leads por fase" description="Detalhamento por estágio do CRM">
         <LeadsByStageChart data={data?.byStage ?? []} />
       </ChartCard>
+        </div>
+      </FilterApplyingOverlay>
     </PageShell>
   )
 }

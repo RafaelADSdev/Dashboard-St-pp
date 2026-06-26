@@ -16,13 +16,16 @@ import { PageShell } from '@/components/ui/PageShell'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { FilterPanel } from '@/components/ui/FilterPanel'
 import { ChartCard } from '@/components/ui/ChartCard'
+import { FilterApplyingOverlay } from '@/components/ui/FilterApplyingOverlay'
 import { ErrorState, LoadingState } from '@/components/ui/StatusMessage'
+import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
 
 export function DashboardPage() {
   const applied = useAppliedFilters()
-  const { data, isLoading, isError, error } = useLeadsData(applied)
+  const { data, isLoading, isFetching, isError, error } = useLeadsData(applied)
+  const isApplyingFilters = useFilterApplyFeedback(isFetching)
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <PageShell>
         <LoadingState message="Carregando leads da Superintendência Stüpp..." />
@@ -58,6 +61,8 @@ export function DashboardPage() {
         <ApplyFiltersButton />
       </FilterPanel>
 
+      <FilterApplyingOverlay isActive={isApplyingFilters}>
+        <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KPICard label="Total de leads" value={data?.totalLeads ?? 0} color="brand" />
         <KPICard label="Comercial Econômico" value={data?.economicoCount ?? 0} color="indigo" />
@@ -88,6 +93,8 @@ export function DashboardPage() {
       <ChartCard title="Leads por fase do funil" description="Volume em cada estágio do CRM">
         <LeadsByStageChart data={data?.byStage ?? []} />
       </ChartCard>
+        </div>
+      </FilterApplyingOverlay>
     </PageShell>
   )
 }
