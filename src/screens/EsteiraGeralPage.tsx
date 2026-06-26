@@ -2,6 +2,7 @@
 
 import { useFilterStore } from '@/store/filterStore'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
+import { DiretoriaFilter } from '@/components/filters/DiretoriaFilter'
 import { EquipeFilter } from '@/components/filters/EquipeFilter'
 import { PipelineFunnelChart } from '@/components/charts/PipelineFunnelChart'
 import { LeadsByStageChart } from '@/components/charts/LeadsByStageChart'
@@ -44,6 +45,7 @@ export function EsteiraGeralPage() {
 
       <FilterPanel>
         <DateRangeFilter />
+        <DiretoriaFilter />
         <EquipeFilter />
       </FilterPanel>
 

@@ -27,7 +27,6 @@ export function Sidebar() {
             priority
             className="h-9 w-auto"
           />
-          <p className="text-xs font-medium text-blue-800/70 mt-2">Superintendência</p>
         </Link>
       </div>
 
