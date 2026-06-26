@@ -19,10 +19,12 @@ export function PipelineFunnelChart({ data }: Props) {
     )
   }
 
+  const chartHeight = Math.max(280, data.length * 40)
+
   return (
     <ReactApexChart
       type="bar"
-      height={320}
+      height={chartHeight}
       options={{
         chart: {
           type: 'bar',
@@ -53,7 +55,10 @@ export function PipelineFunnelChart({ data }: Props) {
           axisTicks: { show: false },
         },
         yaxis: {
-          labels: { style: { colors: '#475569', fontSize: '12px', fontWeight: 500 } },
+          labels: {
+            style: { colors: '#475569', fontSize: '12px', fontWeight: 500 },
+            maxWidth: 220,
+          },
         },
         tooltip: {
           theme: 'light',

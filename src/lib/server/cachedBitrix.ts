@@ -1,7 +1,9 @@
 import { unstable_cache } from 'next/cache'
-import { fetchStageLabels } from '@/api/bitrix'
+import { fetchStageDefinitions } from '@/api/bitrix'
 import { fetchStuppOrgStructure } from '@/api/bitrixDepartments'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from '@/api/bitrixConfig'
+import type { StageCatalog } from '@/api/bitrixStages'
+import { buildStageLabels } from '@/api/bitrixStages'
 import { getServerBitrixWebhookUrl } from './bitrixWebhook'
 
 export const getCachedOrgStructure = unstable_cache(
@@ -10,15 +12,29 @@ export const getCachedOrgStructure = unstable_cache(
   { revalidate: 60 * 60 * 24 }
 )
 
-export const getCachedStageLabels = unstable_cache(
-  async () => {
+export const getCachedStageCatalog = unstable_cache(
+  async (): Promise<StageCatalog> => {
     const webhookUrl = getServerBitrixWebhookUrl()
     const [geral, economico] = await Promise.all([
-      fetchStageLabels(webhookUrl, ESTEIRA_GERAL_ID),
-      fetchStageLabels(webhookUrl, ESTEIRA_ECONOMICO_ID),
+      fetchStageDefinitions(webhookUrl, ESTEIRA_GERAL_ID),
+      fetchStageDefinitions(webhookUrl, ESTEIRA_ECONOMICO_ID),
     ])
-    return { ...geral, ...economico }
+
+    return {
+      geral,
+      economico,
+      labels: {
+        ...buildStageLabels(geral),
+        ...buildStageLabels(economico),
+      },
+    }
   },
-  ['stupp-stage-labels'],
+  ['stupp-stage-catalog'],
   { revalidate: 60 * 60 * 24 }
 )
+
+/** @deprecated Use getCachedStageCatalog */
+export async function getCachedStageLabels() {
+  const catalog = await getCachedStageCatalog()
+  return catalog.labels
+}

@@ -1,5 +1,7 @@
 import type { BitrixLead } from './types'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from './bitrixConfig'
+import type { BitrixStageDefinition } from './bitrixStages'
+import { normalizeStageId } from './bitrixStages'
 
 export type { BitrixLead }
 
@@ -79,6 +81,31 @@ async function fetchUserNames(
   return names
 }
 
+export async function fetchStageDefinitions(
+  webhookUrl: string,
+  categoryId: string
+): Promise<BitrixStageDefinition[]> {
+  const data = await bitrixPost<{
+    result: {
+      STATUS_ID: string
+      NAME: string
+      SORT?: string
+      SEMANTICS?: string | null
+      EXTRA?: { SEMANTICS?: string }
+    }[]
+  }>(webhookUrl, 'crm.dealcategory.stage.list', { id: categoryId })
+
+  return (data.result ?? [])
+    .map((stage) => ({
+      statusId: stage.STATUS_ID,
+      name: stage.NAME,
+      sort: Number(stage.SORT ?? 0),
+      categoryId,
+      semantics: stage.SEMANTICS ?? stage.EXTRA?.SEMANTICS ?? null,
+    }))
+    .sort((a, b) => a.sort - b.sort)
+}
+
 export async function fetchStageLabels(
   webhookUrl: string,
   categoryId: string
@@ -128,6 +155,7 @@ function normalizeDeal(
   userToDiretoriaName: Record<string, string>
 ): BitrixLead {
   const assignedId = String(raw.ASSIGNED_BY_ID ?? '')
+  const categoryId = String(raw.CATEGORY_ID ?? '0')
 
   return {
     id: String(raw.ID ?? ''),
@@ -136,8 +164,8 @@ function normalizeDeal(
     assigned_by_name: userNames[assignedId] ?? (assignedId ? `Usuário #${assignedId}` : 'Sem responsável'),
     equipe: userToTeamName[assignedId] ?? 'Sem equipe',
     diretoria: userToDiretoriaName[assignedId] ?? 'Outros',
-    stage_id: String(raw.STAGE_ID ?? ''),
-    category_id: String(raw.CATEGORY_ID ?? '0'),
+    stage_id: normalizeStageId(String(raw.STAGE_ID ?? ''), categoryId),
+    category_id: categoryId,
     date_create: String(raw.DATE_CREATE ?? ''),
     source_id: String(raw.SOURCE_ID ?? ''),
   }

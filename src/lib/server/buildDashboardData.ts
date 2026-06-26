@@ -4,15 +4,15 @@ import type { FilterParams, LeadsDashboardData } from '@/api/types'
 import { getEquipeOptions, resolveAssignedByIds } from '@/lib/orgPreview'
 import { aggregateLeadsData } from '@/utils/aggregateLeads'
 import { getServerBitrixWebhookUrl } from './bitrixWebhook'
-import { getCachedOrgStructure, getCachedStageLabels } from './cachedBitrix'
+import { getCachedOrgStructure, getCachedStageCatalog } from './cachedBitrix'
 
 export async function buildDashboardData(filters: FilterParams): Promise<LeadsDashboardData> {
   const webhookUrl = getServerBitrixWebhookUrl()
   const categoryIds = getCategoryIdsForEsteira(filters.esteira)
 
-  const [org, stageLabels] = await Promise.all([
+  const [org, stageCatalog] = await Promise.all([
     getCachedOrgStructure(),
-    getCachedStageLabels(),
+    getCachedStageCatalog(),
   ])
 
   const equipeOptions = getEquipeOptions(org)
@@ -23,7 +23,7 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
     return aggregateLeadsData(
       [],
       filters,
-      stageLabels,
+      stageCatalog,
       { geral: 0, economico: 0, total: 0 },
       org,
       equipeOptions
@@ -52,7 +52,7 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
   return aggregateLeadsData(
     bitrixLeads,
     filters,
-    stageLabels,
+    stageCatalog,
     esteiraCounts,
     org,
     equipeOptions
