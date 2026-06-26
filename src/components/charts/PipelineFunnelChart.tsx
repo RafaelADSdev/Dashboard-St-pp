@@ -35,16 +35,11 @@ export function PipelineFunnelChart({ data }: Props) {
             barHeight: '72%',
             distributed: true,
             borderRadius: 6,
-            dataLabels: { position: 'bottom' },
           },
         },
         colors: FUNNEL_COLORS,
         dataLabels: {
-          enabled: true,
-          textAnchor: 'start',
-          offsetX: 6,
-          formatter: (val: number) => `${val}`,
-          style: { fontSize: '12px', fontWeight: 600, colors: ['#fff'] },
+          enabled: false,
         },
         grid: {
           borderColor: '#f1f5f9',
