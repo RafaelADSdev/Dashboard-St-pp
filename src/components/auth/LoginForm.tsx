@@ -6,7 +6,7 @@ import { Eye, EyeOff, Loader2, User } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import clsx from 'clsx'
 import { createClient } from '@/lib/supabase/client'
-import { isSupabaseAuthEnabled } from '@/lib/supabase/config'
+import { isSupabaseAuthEnabled, shouldEnforceAuth } from '@/lib/supabase/config'
 import { usernameToEmail } from '@/lib/supabase/username'
 
 export function LoginForm() {
@@ -26,7 +26,7 @@ export function LoginForm() {
     setLoading(true)
     setError('')
 
-    if (!isSupabaseAuthEnabled()) {
+    if (!shouldEnforceAuth() && !isSupabaseAuthEnabled()) {
       setError('Supabase Auth não configurado. Defina as variáveis de ambiente.')
       setLoading(false)
       return

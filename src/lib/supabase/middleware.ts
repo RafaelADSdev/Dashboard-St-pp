@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { getSupabasePublishableKey, getSupabaseUrl, isSupabaseAuthEnabled } from './config'
+import {
+  getSupabasePublishableKey,
+  getSupabaseUrl,
+  isSupabaseAuthEnabled,
+  shouldEnforceAuth,
+} from './config'
 
 const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/auth/logout'])
 
@@ -12,8 +17,38 @@ function isStaticAsset(pathname: string): boolean {
   return /\.(?:svg|png|jpe?g|gif|webp|ico|woff2?)$/i.test(pathname)
 }
 
+function redirectToLogin(request: NextRequest) {
+  const loginUrl = new URL('/login', request.url)
+  const { pathname } = request.nextUrl
+  if (pathname !== '/') {
+    loginUrl.searchParams.set('from', pathname)
+  }
+  return NextResponse.redirect(loginUrl)
+}
+
 export async function updateSession(request: NextRequest) {
-  if (!isSupabaseAuthEnabled() || isStaticAsset(request.nextUrl.pathname)) {
+  const { pathname } = request.nextUrl
+
+  if (isStaticAsset(pathname)) {
+    return NextResponse.next({ request })
+  }
+
+  const enforceAuth = shouldEnforceAuth()
+
+  if (!enforceAuth) {
+    return NextResponse.next({ request })
+  }
+
+  if (!isSupabaseAuthEnabled()) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Supabase Auth não configurado no servidor.' },
+        { status: 503 }
+      )
+    }
+    if (!isPublicPath(pathname)) {
+      return redirectToLogin(request)
+    }
     return NextResponse.next({ request })
   }
 
@@ -34,10 +69,10 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  const { data } = await supabase.auth.getClaims()
-  const isAuthenticated = Boolean(data?.claims)
-
-  const { pathname } = request.nextUrl
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const isAuthenticated = Boolean(user)
 
   if (isPublicPath(pathname)) {
     if (isAuthenticated && pathname === '/login') {
@@ -50,9 +85,5 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  const loginUrl = new URL('/login', request.url)
-  if (pathname !== '/') {
-    loginUrl.searchParams.set('from', pathname)
-  }
-  return NextResponse.redirect(loginUrl)
+  return redirectToLogin(request)
 }
