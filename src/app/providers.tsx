@@ -30,6 +30,16 @@ export function Providers({ children }: { children: ReactNode }) {
       },
       staleTime: 1000 * 60 * 60 * 24,
     })
+    void queryClient.prefetchQuery({
+      queryKey: ['stupp-roletas'],
+      queryFn: async () => {
+        const res = await fetch('/api/roletas')
+        if (!res.ok) throw new Error('Erro ao carregar roletas')
+        const data = await res.json()
+        return data.roletas
+      },
+      staleTime: 1000 * 60 * 60 * 24,
+    })
   }, [initDates, queryClient])
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

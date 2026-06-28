@@ -1,12 +1,25 @@
 import type { BitrixLead } from './types'
+import { ROLETA_DEAL_FIELD } from './bitrixRoletas'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from './bitrixConfig'
+import { getTeamLabel, type StuppOrgStructure } from './bitrixDepartments'
 import type { BitrixStageDefinition } from './bitrixStages'
 import { normalizeStageId } from './bitrixStages'
+import { addDays, differenceInDays, format, parseISO } from 'date-fns'
 
 export type { BitrixLead }
 
 const PAGE_SIZE = 50
-const MAX_RECORDS = 500
+/** O Bitrix só retorna até 500 registros por consulta de listagem */
+const BITRIX_LIST_MAX = 500
+const SAFETY_MAX_RECORDS = 15_000
+
+export type DealQueryParams = {
+  dateFrom: string
+  dateTo: string
+  categoryIds: string[]
+  assignedByIds?: string[]
+  roletaTitle?: string
+}
 
 interface BitrixDealRaw {
   ID?: string | number
@@ -126,9 +139,23 @@ export async function fetchStageLabels(
   return labels
 }
 
+export async function fetchSourceLabels(webhookUrl: string): Promise<Record<string, string>> {
+  const data = await bitrixPost<{ result: { STATUS_ID: string; NAME: string }[] }>(
+    webhookUrl,
+    'crm.status.list',
+    { filter: { ENTITY_ID: 'SOURCE' } }
+  )
+
+  const labels: Record<string, string> = {}
+  for (const source of data.result ?? []) {
+    labels[source.STATUS_ID] = source.NAME
+  }
+  return labels
+}
+
 export async function countDeals(
   webhookUrl: string,
-  params: { dateFrom: string; dateTo: string; categoryIds: string[]; assignedByIds?: string[] }
+  params: DealQueryParams
 ): Promise<number> {
   const filter: Record<string, unknown> = {
     '>=DATE_CREATE': params.dateFrom,
@@ -138,6 +165,10 @@ export async function countDeals(
 
   if (params.assignedByIds?.length) {
     filter['@ASSIGNED_BY_ID'] = params.assignedByIds
+  }
+
+  if (params.roletaTitle) {
+    filter[ROLETA_DEAL_FIELD] = params.roletaTitle
   }
 
   const data = await bitrixPost<{ total: number }>(webhookUrl, 'crm.deal.list', {
@@ -171,26 +202,25 @@ function normalizeDeal(
   }
 }
 
-export async function fetchLeadsFromBitrix(
+function dedupeDeals(deals: BitrixDealRaw[]): BitrixDealRaw[] {
+  const seen = new Set<string>()
+  return deals.filter((deal) => {
+    const id = String(deal.ID ?? '')
+    if (!id || seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+}
+
+async function fetchDealPages(
   webhookUrl: string,
-  params: {
-    dateFrom: string
-    dateTo: string
-    categoryIds: string[]
-    assignedByIds?: string[]
-    userToTeamName?: Record<string, string>
-    userToDiretoriaName?: Record<string, string>
-  }
-): Promise<BitrixLead[]> {
-  const userToTeamName = params.userToTeamName ?? {}
-  const userToDiretoriaName = params.userToDiretoriaName ?? {}
-
+  params: DealQueryParams
+): Promise<BitrixDealRaw[]> {
   const allDeals: BitrixDealRaw[] = []
-  const userIds = new Set<string>()
   let start = 0
-  let hasMore = true
+  let expectedTotal: number | undefined
 
-  while (hasMore && allDeals.length < MAX_RECORDS) {
+  while (start < BITRIX_LIST_MAX && allDeals.length < SAFETY_MAX_RECORDS) {
     const filter: Record<string, unknown> = {
       '>=DATE_CREATE': params.dateFrom,
       '<=DATE_CREATE': params.dateTo,
@@ -201,35 +231,136 @@ export async function fetchLeadsFromBitrix(
       filter['@ASSIGNED_BY_ID'] = params.assignedByIds
     }
 
-    const data = await bitrixPost<{ result: BitrixDealRaw[] }>(webhookUrl, 'crm.deal.list', {
-      filter,
-      select: [
-        'ID',
-        'TITLE',
-        'ASSIGNED_BY_ID',
-        'STAGE_ID',
-        'CATEGORY_ID',
-        'DATE_CREATE',
-        'SOURCE_ID',
-      ],
-      order: { DATE_CREATE: 'DESC' },
-      start,
-    })
+    if (params.roletaTitle) {
+      filter[ROLETA_DEAL_FIELD] = params.roletaTitle
+    }
+
+    const data = await bitrixPost<{ result: BitrixDealRaw[]; total?: number }>(
+      webhookUrl,
+      'crm.deal.list',
+      {
+        filter,
+        select: [
+          'ID',
+          'TITLE',
+          'ASSIGNED_BY_ID',
+          'STAGE_ID',
+          'CATEGORY_ID',
+          'DATE_CREATE',
+          'SOURCE_ID',
+        ],
+        order: { DATE_CREATE: 'DESC' },
+        start,
+      }
+    )
+
+    if (expectedTotal === undefined && data.total !== undefined) {
+      expectedTotal = data.total
+    }
 
     const batch = data.result ?? []
     allDeals.push(...batch)
 
-    for (const deal of batch) {
-      if (deal.ASSIGNED_BY_ID) {
-        userIds.add(String(deal.ASSIGNED_BY_ID))
-      }
-    }
+    if (batch.length < PAGE_SIZE) break
+    if (expectedTotal !== undefined && allDeals.length >= expectedTotal) break
 
-    if (batch.length < PAGE_SIZE) {
-      hasMore = false
-    } else {
-      start += PAGE_SIZE
-      await sleep(150)
+    start += PAGE_SIZE
+    await sleep(150)
+  }
+
+  return allDeals
+}
+
+async function fetchDealsWithSplit(
+  webhookUrl: string,
+  params: DealQueryParams
+): Promise<BitrixDealRaw[]> {
+  const total = await countDeals(webhookUrl, params)
+  if (total === 0) return []
+  if (total <= BITRIX_LIST_MAX) {
+    return fetchDealPages(webhookUrl, params)
+  }
+
+  const from = parseISO(params.dateFrom)
+  const to = parseISO(params.dateTo)
+  if (differenceInDays(to, from) < 1) {
+    return fetchDealPages(webhookUrl, params)
+  }
+
+  const mid = addDays(from, Math.floor(differenceInDays(to, from) / 2))
+  const midStr = format(mid, 'yyyy-MM-dd')
+  const rightStart = format(addDays(mid, 1), 'yyyy-MM-dd')
+
+  const [left, right] = await Promise.all([
+    fetchDealsWithSplit(webhookUrl, { ...params, dateTo: midStr }),
+    fetchDealsWithSplit(webhookUrl, { ...params, dateFrom: rightStart }),
+  ])
+
+  return dedupeDeals([...left, ...right])
+}
+
+export async function fetchBreakdownCounts(
+  webhookUrl: string,
+  params: DealQueryParams & { scopeUserIds: string[] },
+  org: StuppOrgStructure
+) {
+  const scope = new Set(params.scopeUserIds)
+
+  const countUsers = async (userIds: string[]) => {
+    const ids = [...new Set(userIds.filter((id) => scope.has(id)))]
+    if (ids.length === 0) return 0
+
+    return countDeals(webhookUrl, {
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      categoryIds: params.categoryIds,
+      assignedByIds: ids,
+      roletaTitle: params.roletaTitle,
+    })
+  }
+
+  const byDiretoria = await Promise.all(
+    org.diretorias.map(async (diretoria) => ({
+      id: diretoria.id,
+      name: diretoria.name,
+      leads: await countUsers(diretoria.teams.flatMap((team) => team.userIds)),
+    }))
+  )
+
+  const byTeam = await Promise.all(
+    org.diretorias.flatMap((diretoria) =>
+      diretoria.teams.map(async (team) => ({
+        equipe: getTeamLabel(team),
+        leads: await countUsers(team.userIds),
+      }))
+    )
+  )
+
+  return { byDiretoria, byTeam }
+}
+
+export async function fetchLeadsFromBitrix(
+  webhookUrl: string,
+  params: DealQueryParams & {
+    userToTeamName?: Record<string, string>
+    userToDiretoriaName?: Record<string, string>
+  }
+): Promise<BitrixLead[]> {
+  const userToTeamName = params.userToTeamName ?? {}
+  const userToDiretoriaName = params.userToDiretoriaName ?? {}
+
+  const rawByCategory = await Promise.all(
+    params.categoryIds.map((categoryId) =>
+      fetchDealsWithSplit(webhookUrl, { ...params, categoryIds: [categoryId] })
+    )
+  )
+
+  const allDeals = dedupeDeals(rawByCategory.flat())
+  const userIds = new Set<string>()
+
+  for (const deal of allDeals) {
+    if (deal.ASSIGNED_BY_ID) {
+      userIds.add(String(deal.ASSIGNED_BY_ID))
     }
   }
 
@@ -243,9 +374,10 @@ export async function fetchEsteiraCounts(
   webhookUrl: string,
   dateFrom: string,
   dateTo: string,
-  assignedByIds?: string[]
+  assignedByIds?: string[],
+  roletaTitle?: string
 ) {
-  const baseParams = { dateFrom, dateTo, assignedByIds }
+  const baseParams = { dateFrom, dateTo, assignedByIds, roletaTitle }
   const [geral, economico] = await Promise.all([
     countDeals(webhookUrl, { ...baseParams, categoryIds: [ESTEIRA_GERAL_ID] }),
     countDeals(webhookUrl, { ...baseParams, categoryIds: [ESTEIRA_ECONOMICO_ID] }),

@@ -4,6 +4,7 @@ import { useFilterStore, type FilterValues } from '@/store/filterStore'
 
 interface Props {
   ignoreEsteira?: boolean
+  onApply?: () => void
 }
 
 function pickDraft(state: {
@@ -11,6 +12,7 @@ function pickDraft(state: {
   dateTo: string
   diretoria: string
   equipe: string
+  roleta: string
   esteira: FilterValues['esteira']
 }): FilterValues {
   return {
@@ -18,6 +20,7 @@ function pickDraft(state: {
     dateTo: state.dateTo,
     diretoria: state.diretoria,
     equipe: state.equipe,
+    roleta: state.roleta,
     esteira: state.esteira,
   }
 }
@@ -28,11 +31,12 @@ function filtersEqual(a: FilterValues, b: FilterValues, ignoreEsteira = false) {
     a.dateTo === b.dateTo &&
     a.diretoria === b.diretoria &&
     a.equipe === b.equipe &&
+    a.roleta === b.roleta &&
     (ignoreEsteira || a.esteira === b.esteira)
   )
 }
 
-export function ApplyFiltersButton({ ignoreEsteira = false }: Props) {
+export function ApplyFiltersButton({ ignoreEsteira = false, onApply }: Props) {
   const applyFilters = useFilterStore((s) => s.applyFilters)
   const isApplying = useFilterStore((s) => s.isApplying)
   const datesReady = useFilterStore((s) => s.datesReady)
@@ -47,10 +51,13 @@ export function ApplyFiltersButton({ ignoreEsteira = false }: Props) {
   return (
     <button
       type="button"
-      onClick={applyFilters}
+      onClick={() => {
+        applyFilters()
+        onApply?.()
+      }}
       disabled={!canApply && !isLoading}
       className={clsx(
-        'inline-flex h-9 min-w-[148px] items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all',
+        'inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all',
         'focus:outline-none focus:ring-2 focus:ring-brand-500/30',
         isLoading
           ? 'bg-blue-800 text-white cursor-wait'

@@ -3,10 +3,11 @@
 import { useAppliedFilters } from '@/store/filterStore'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { DiretoriaFilter } from '@/components/filters/DiretoriaFilter'
-import { ApplyFiltersButton } from '@/components/filters/ApplyFiltersButton'
 import { EquipeFilter } from '@/components/filters/EquipeFilter'
+import { RoletaFilter } from '@/components/filters/RoletaFilter'
 import { PipelineFunnelChart } from '@/components/charts/PipelineFunnelChart'
 import { LeadsByStageChart } from '@/components/charts/LeadsByStageChart'
+import { LeadsBySourceChart } from '@/components/charts/LeadsBySourceChart'
 import { LeadsOverTimeChart } from '@/components/charts/LeadsOverTimeChart'
 import { KPICard } from '@/components/cards/KPICard'
 import { useLeadsData } from '@/hooks/useLeadsData'
@@ -18,63 +19,66 @@ import { FilterApplyingOverlay } from '@/components/ui/FilterApplyingOverlay'
 import { ErrorState, LoadingState } from '@/components/ui/StatusMessage'
 import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
 
+function EsteiraEconomicoFilters() {
+  return (
+    <FilterPanel ignoreEsteira>
+      <DateRangeFilter />
+      <DiretoriaFilter />
+      <EquipeFilter />
+      <RoletaFilter />
+    </FilterPanel>
+  )
+}
+
 export function EsteiraEconomicoPage() {
   const applied = useAppliedFilters()
   const { data, isLoading, isFetching, isPending, isError } = useLeadsData(applied, { esteira: 'ECONOMICO' })
   const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
 
-  if (isLoading && !data) {
-    return (
-      <PageShell>
-        <LoadingState />
-      </PageShell>
-    )
-  }
-
-  if (isError) {
-    return (
-      <PageShell>
-        <ErrorState />
-      </PageShell>
-    )
-  }
-
   return (
-    <PageShell>
-      <PageHeader
-        badge="Comercial Econômico"
-        title="Esteira Comercial Econômico"
-        subtitle="Negociações da superintendência Stüpp na esteira econômica."
-      />
+    <>
+      <EsteiraEconomicoFilters />
 
-      <FilterPanel>
-        <DateRangeFilter />
-        <DiretoriaFilter />
-        <EquipeFilter />
-        <ApplyFiltersButton ignoreEsteira />
-      </FilterPanel>
+      <PageShell>
+        {isLoading && !data ? (
+          <LoadingState />
+        ) : isError ? (
+          <ErrorState />
+        ) : (
+          <>
+            <PageHeader
+              badge="Comercial Econômico"
+              title="Esteira Comercial Econômico"
+              subtitle="Negociações da superintendência Stüpp na esteira econômica."
+            />
 
-      <FilterApplyingOverlay isActive={isApplyingFilters}>
-        <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-        <KPICard label="Total no período" value={data?.totalLeads ?? 0} color="brand" />
-        <KPICard label="Comercial Econômico" value={data?.economicoCount ?? 0} color="indigo" />
-      </div>
+            <FilterApplyingOverlay isActive={isApplyingFilters}>
+              <div className="space-y-5">
+                <div className="max-w-sm">
+                  <KPICard label="Comercial Econômico" value={data?.economicoCount ?? 0} color="indigo" />
+                </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <ChartCard title="Funil da esteira" description="Distribuição por etapa">
-          <PipelineFunnelChart data={data?.funnelEconomico ?? []} />
-        </ChartCard>
-        <ChartCard title="Evolução no período" description="Leads ao longo do tempo">
-          <LeadsOverTimeChart data={data?.overTime ?? []} />
-        </ChartCard>
-      </div>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                  <ChartCard title="Funil da esteira" description="Distribuição por etapa">
+                    <PipelineFunnelChart data={data?.funnelEconomico ?? []} />
+                  </ChartCard>
+                  <ChartCard title="Evolução no período" description="Leads ao longo do tempo">
+                    <LeadsOverTimeChart data={data?.overTime ?? []} esteira="economico" />
+                  </ChartCard>
+                </div>
 
-      <ChartCard title="Leads por fase" description="Detalhamento por estágio do CRM">
-        <LeadsByStageChart data={data?.byStage ?? []} />
-      </ChartCard>
-        </div>
-      </FilterApplyingOverlay>
-    </PageShell>
+                <ChartCard title="Leads por fase" description="Detalhamento por estágio do CRM">
+                  <LeadsByStageChart data={data?.byStage ?? []} />
+                </ChartCard>
+
+                <ChartCard title="Leads por origem" description="Fonte de captação no CRM">
+                  <LeadsBySourceChart data={data?.bySource ?? []} />
+                </ChartCard>
+              </div>
+            </FilterApplyingOverlay>
+          </>
+        )}
+      </PageShell>
+    </>
   )
 }

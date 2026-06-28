@@ -8,6 +8,7 @@ export interface FilterValues {
   dateTo: string
   diretoria: string
   equipe: string
+  roleta: string
   esteira: Esteira
 }
 
@@ -23,6 +24,7 @@ function defaultFilters(): FilterValues {
     ...getDefaultDateRange(),
     diretoria: '',
     equipe: '',
+    roleta: '',
     esteira: 'TODAS',
   }
 }
@@ -33,6 +35,7 @@ function pickDraft(state: FilterState): FilterValues {
     dateTo: state.dateTo,
     diretoria: state.diretoria,
     equipe: state.equipe,
+    roleta: state.roleta,
     esteira: state.esteira,
   }
 }
@@ -43,6 +46,7 @@ function filtersEqual(a: FilterValues, b: FilterValues, ignoreEsteira = false) {
     a.dateTo === b.dateTo &&
     a.diretoria === b.diretoria &&
     a.equipe === b.equipe &&
+    a.roleta === b.roleta &&
     (ignoreEsteira || a.esteira === b.esteira)
   )
 }
@@ -54,6 +58,7 @@ interface FilterState extends FilterValues {
   setDateTo: (v: string) => void
   setDiretoria: (v: string) => void
   setEquipe: (v: string) => void
+  setRoleta: (v: string) => void
   setEsteira: (v: Esteira) => void
   applyFilters: () => void
   initDates: () => void
@@ -68,6 +73,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   dateTo: '',
   diretoria: '',
   equipe: '',
+  roleta: '',
   esteira: 'TODAS',
   datesReady: false,
   applied: null,
@@ -77,6 +83,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   setDateTo: (v) => set({ dateTo: v }),
   setDiretoria: (v) => set({ diretoria: v, equipe: '' }),
   setEquipe: (v) => set({ equipe: v }),
+  setRoleta: (v) => set({ roleta: v }),
   setEsteira: (v) => set({ esteira: v }),
   applyFilters: () => {
     const draft = pickDraft(get())

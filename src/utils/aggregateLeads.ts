@@ -10,7 +10,7 @@ import {
   groupByStageBreakdown,
   groupByStageOrdered,
 } from '@/api/bitrixStages'
-import type { BitrixLead, FilterParams, LeadsDashboardData, StuppTeamOption, TeamDetail } from '@/api/types'
+import type { BitrixLead, DiretoriaSummary, FilterParams, LeadsDashboardData, StuppTeamOption, TeamDetail } from '@/api/types'
 import type { StuppOrgStructure } from '@/api/bitrixDepartments'
 import { getTeamLabel } from '@/api/bitrixDepartments'
 
@@ -20,13 +20,20 @@ interface EsteiraCounts {
   economico: number
 }
 
+interface BreakdownCounts {
+  byDiretoria: DiretoriaSummary[]
+  byTeam: { equipe: string; leads: number }[]
+}
+
 export function aggregateLeadsData(
   bitrixLeads: BitrixLead[],
   filters: FilterParams,
   stageCatalog: StageCatalog,
   counts: EsteiraCounts,
   org: StuppOrgStructure,
-  equipeOptions: StuppTeamOption[]
+  equipeOptions: StuppTeamOption[],
+  breakdownCounts?: BreakdownCounts,
+  sourceLabels: Record<string, string> = {}
 ): LeadsDashboardData {
   const { labels, geral: geralStages, economico: economicoStages } = stageCatalog
 
@@ -62,11 +69,16 @@ export function aggregateLeadsData(
 
   const equipes = equipeOptions
 
-  const byDiretoria = org.diretorias.map((diretoria) => {
+  const byDiretoriaFromLeads = org.diretorias.map((diretoria) => {
     const userIds = new Set(diretoria.teams.flatMap((t) => t.userIds))
     const leads = filtered.filter((l) => userIds.has(l.assigned_by_id)).length
     return { id: diretoria.id, name: diretoria.name, leads }
   })
+
+  const byTeamFromLeads = Object.entries(byTeam).map(([equipe, items]) => ({
+    equipe,
+    leads: items.length,
+  }))
 
   const teamDetails: TeamDetail[] = org.diretorias.flatMap((diretoria) =>
     diretoria.teams.map((team) => {
@@ -89,13 +101,11 @@ export function aggregateLeadsData(
     totalLeads: counts.total,
     economicoCount: counts.economico,
     geralCount: counts.geral,
-    byTeam: Object.entries(byTeam).map(([equipe, items]) => ({
-      equipe,
-      leads: items.length,
-    })),
-    byDiretoria,
+    byTeam: breakdownCounts?.byTeam ?? byTeamFromLeads,
+    byDiretoria: breakdownCounts?.byDiretoria ?? byDiretoriaFromLeads,
     teamDetails,
     byStage: buildByStageForFilter(filtered, filters.esteira, stageCatalog),
+    bySource: groupBySource(filtered, sourceLabels),
     funnelEconomico: groupByStageOrdered(
       funnelEconomico,
       economicoStages,
@@ -162,6 +172,25 @@ function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
     },
     {} as Record<string, T[]>
   )
+}
+
+function groupBySource(
+  leads: BitrixLead[],
+  sourceLabels: Record<string, string>
+): { source: string; count: number }[] {
+  const counts: Record<string, number> = {}
+
+  for (const lead of leads) {
+    const key = lead.source_id || '__empty__'
+    counts[key] = (counts[key] ?? 0) + 1
+  }
+
+  return Object.entries(counts)
+    .map(([id, count]) => ({
+      source: id === '__empty__' ? 'Sem origem' : (sourceLabels[id] ?? id),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
 }
 
 function groupByDate(leads: BitrixLead[]) {

@@ -13,6 +13,7 @@ import {
 
 interface Props {
   data: { date: string; economico: number; geral: number }[]
+  esteira?: 'both' | 'geral' | 'economico'
 }
 
 const tooltipStyle = {
@@ -22,7 +23,10 @@ const tooltipStyle = {
   fontSize: '13px',
 }
 
-export function LeadsOverTimeChart({ data }: Props) {
+export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
+  const showEconomico = esteira === 'both' || esteira === 'economico'
+  const showGeral = esteira === 'both' || esteira === 'geral'
+
   return (
     <ResponsiveContainer width="100%" height={280}>
       <AreaChart data={data} margin={{ top: 5, right: 12, left: 0, bottom: 5 }}>
@@ -40,26 +44,32 @@ export function LeadsOverTimeChart({ data }: Props) {
         <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Legend
-          wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }}
-          iconType="circle"
-        />
-        <Area
-          type="monotone"
-          dataKey="economico"
-          name="Econômico"
-          stroke="#6366f1"
-          fill="url(#colorEco)"
-          strokeWidth={2.5}
-        />
-        <Area
-          type="monotone"
-          dataKey="geral"
-          name="Geral"
-          stroke="#10b981"
-          fill="url(#colorGeral)"
-          strokeWidth={2.5}
-        />
+        {esteira === 'both' && (
+          <Legend
+            wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }}
+            iconType="circle"
+          />
+        )}
+        {showEconomico && (
+          <Area
+            type="monotone"
+            dataKey="economico"
+            name="Econômico"
+            stroke="#6366f1"
+            fill="url(#colorEco)"
+            strokeWidth={2.5}
+          />
+        )}
+        {showGeral && (
+          <Area
+            type="monotone"
+            dataKey="geral"
+            name="Geral"
+            stroke="#10b981"
+            fill="url(#colorGeral)"
+            strokeWidth={2.5}
+          />
+        )}
       </AreaChart>
     </ResponsiveContainer>
   )

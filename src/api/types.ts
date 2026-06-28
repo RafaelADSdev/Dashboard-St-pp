@@ -42,6 +42,7 @@ export interface LeadsDashboardData {
   byDiretoria: DiretoriaSummary[]
   teamDetails: TeamDetail[]
   byStage: { stage: string; count: number }[]
+  bySource: { source: string; count: number }[]
   funnelEconomico: { x: string; y: number }[]
   funnelGeral: { x: string; y: number }[]
   overTime: { date: string; economico: number; geral: number }[]
@@ -49,10 +50,17 @@ export interface LeadsDashboardData {
   equipes: StuppTeamOption[]
 }
 
+export interface StuppRoletaOption {
+  id: string
+  title: string
+  isActive: boolean
+}
+
 export interface FilterParams {
   dateFrom: string
   dateTo: string
   diretoria: string
   equipe: string
+  roleta: string
   esteira: string
 }

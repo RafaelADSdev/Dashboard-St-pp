@@ -9,6 +9,7 @@ async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData
     esteira: filters.esteira,
     diretoria: filters.diretoria,
     equipe: filters.equipe,
+    roleta: filters.roleta,
   })
 
   const res = await fetch(`/api/dashboard?${params.toString()}`)

@@ -18,6 +18,7 @@ function parseFilters(searchParams: URLSearchParams): FilterParams | null {
     esteira: searchParams.get('esteira') ?? 'TODAS',
     diretoria: searchParams.get('diretoria') ?? '',
     equipe: searchParams.get('equipe') ?? '',
+    roleta: searchParams.get('roleta') ?? '',
   }
 }
 

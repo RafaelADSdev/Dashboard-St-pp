@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache'
-import { fetchStageDefinitions } from '@/api/bitrix'
+import { fetchSourceLabels, fetchStageDefinitions } from '@/api/bitrix'
+import { fetchStuppRoletas } from '@/api/bitrixRoletas'
 import { fetchStuppOrgStructure } from '@/api/bitrixDepartments'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from '@/api/bitrixConfig'
 import type { StageCatalog } from '@/api/bitrixStages'
@@ -9,6 +10,12 @@ import { getServerBitrixWebhookUrl } from './bitrixWebhook'
 export const getCachedOrgStructure = unstable_cache(
   async () => fetchStuppOrgStructure(getServerBitrixWebhookUrl()),
   ['stupp-org-structure'],
+  { revalidate: 60 * 60 * 24 }
+)
+
+export const getCachedStuppRoletas = unstable_cache(
+  async () => fetchStuppRoletas(getServerBitrixWebhookUrl()),
+  ['stupp-roletas-v2'],
   { revalidate: 60 * 60 * 24 }
 )
 
@@ -30,6 +37,12 @@ export const getCachedStageCatalog = unstable_cache(
     }
   },
   ['stupp-stage-catalog'],
+  { revalidate: 60 * 60 * 24 }
+)
+
+export const getCachedSourceLabels = unstable_cache(
+  async () => fetchSourceLabels(getServerBitrixWebhookUrl()),
+  ['stupp-source-labels'],
   { revalidate: 60 * 60 * 24 }
 )
 
