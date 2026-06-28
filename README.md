@@ -98,6 +98,7 @@ Cada diretoria agrupa equipes com seus respectivos usuários ativos. Filtros de 
 | UI | [React 19](https://react.dev/) + [Tailwind CSS v4](https://tailwindcss.com/) |
 | Estado | [Zustand](https://zustand.docs.pmnd.rs/) (filtros + layout UI) |
 | Dados | [TanStack Query v5](https://tanstack.com/query) |
+| Auth | [Supabase Auth](https://supabase.com/docs/guides/auth) + [@supabase/ssr](https://supabase.com/docs/guides/auth/server-side/nextjs) |
 | Gráficos | [Recharts](https://recharts.org/) + [ApexCharts](https://apexcharts.com/) |
 | Exportação | [jsPDF](https://github.com/parallax/jsPDF) + [jspdf-autotable](https://github.com/simonbengtsson/jsPDF-AutoTable), [xlsx-js-style](https://www.npmjs.com/package/xlsx-js-style) |
 | Datas | [date-fns](https://date-fns.org/) |
@@ -188,8 +189,8 @@ src/
 └── utils/
     ├── aggregateLeads.ts       # Agregação dos dados
     ├── exportDashboard.ts      # Contexto e seções de exportação
-    ├── exportDashboardFiles.ts # Geração PDF / Excel
-    └── excel/buildExcelWorkbook.ts  # Layout Excel estruturado
+    └── excel/                  # Layout Excel estruturado
+lib/supabase/                   # Cliente browser, server e middleware Auth
 ```
 
 ---
@@ -227,7 +228,16 @@ BITRIX_WEBHOOK_URL=https://seu-portal.bitrix24.com.br/rest/USER_ID/TOKEN/
 # IDs das esteiras no CRM (padrão: 16 e 64)
 NEXT_PUBLIC_BITRIX_ESTEIRA_GERAL_ID=16
 NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID=64
+
+# Supabase Auth (obrigatório em produção)
+# Projeto: https://supabase.com/dashboard/project/vhtztzilrrlbflicmeft
+NEXT_PUBLIC_SUPABASE_URL=https://vhtztzilrrlbflicmeft.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon
 ```
+
+> Crie usuários com `npm run seed:admin` (requer `SUPABASE_SERVICE_ROLE_KEY`) ou manualmente no painel Supabase.  
+> Login por **nome de usuário** — o sistema converte internamente para `usuario@stupp.dashboard`.  
+> Admin inicial: usuário `admin` / senha `admin123`.
 
 > **Compatibilidade:** o projeto também aceita `VITE_BITRIX_WEBHOOK_URL` e `VITE_BITRIX_ESTEIRA_*` para ambientes legados.
 
@@ -260,6 +270,8 @@ O projeto está configurado para deploy automático via GitHub.
 | `BITRIX_WEBHOOK_URL` | Production + Preview | Sim |
 | `NEXT_PUBLIC_BITRIX_ESTEIRA_GERAL_ID` | Production + Preview | Não |
 | `NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID` | Production + Preview | Não |
+| `NEXT_PUBLIC_SUPABASE_URL` | Production + Preview | Não |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production + Preview | Não |
 
 3. Deploy manual (opcional):
 
@@ -369,9 +381,13 @@ Regras comuns:
 
 ## Segurança
 
+- **Login via Supabase Auth** — usuários individuais com e-mail e senha
+- Sessão em cookies gerenciada pelo `@supabase/ssr` (renovação automática no middleware)
+- Rotas `/api/*` e páginas do dashboard protegidas por middleware (`getClaims`)
 - O webhook do Bitrix fica **apenas no servidor** (`BITRIX_WEBHOOK_URL`)
 - Arquivos `.env` estão no `.gitignore` — nunca commite credenciais
 - O proxy `/api/bitrix` evita exposição do token no bundle do cliente
+- **Nunca** exponha a `service_role` key do Supabase no frontend
 
 ---
 
