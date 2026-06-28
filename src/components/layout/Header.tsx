@@ -1,12 +1,11 @@
 'use client'
 
 import { LogOut, RefreshCw, RotateCcw, SlidersHorizontal } from 'lucide-react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { useFilterStore } from '@/store/filterStore'
 import { useLayoutUiStore } from '@/store/layoutUiStore'
-import { createClient } from '@/lib/supabase/client'
 import { ExportButton } from './ExportButton'
 
 function useFilterIndicators(ignoreEsteira = false) {
@@ -26,7 +25,6 @@ function useFilterIndicators(ignoreEsteira = false) {
 
 export function Header() {
   const pathname = usePathname() ?? '/'
-  const router = useRouter()
   const queryClient = useQueryClient()
   const resetFilters = useFilterStore((s) => s.resetFilters)
   const toggleFilters = useLayoutUiStore((s) => s.toggleFilters)
@@ -39,11 +37,8 @@ export function Header() {
     queryClient.invalidateQueries({ queryKey: ['stupp-roletas'] })
   }
 
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.replace('/login')
-    router.refresh()
+  const handleLogout = () => {
+    window.location.assign('/auth/logout')
   }
 
   return (

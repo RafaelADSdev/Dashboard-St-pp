@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabasePublishableKey, getSupabaseUrl, isSupabaseAuthEnabled } from './config'
 
-const PUBLIC_PATHS = new Set(['/login', '/auth/callback'])
+const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/auth/logout'])
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.has(pathname)
