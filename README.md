@@ -19,6 +19,7 @@ Painel operacional para acompanhar negociações do **Bitrix24** da Superintend�
 - [API interna](#api-interna)
 - [Filtros](#filtros)
 - [Exportação de relatórios](#exportação-de-relatórios)
+- [Kanban operacional](#kanban-operacional)
 - [Performance e confiabilidade](#performance-e-confiabilidade)
 - [Segurança](#segurança)
 - [Scripts disponíveis](#scripts-disponíveis)
@@ -60,11 +61,22 @@ Cada diretoria agrupa equipes com seus respectivos usuários ativos. Filtros de 
 
 ### Dashboard e análises
 
-- **Visão geral comercial** — KPIs das duas esteiras, funis, evolução temporal, leads por fase e **leads por fonte** (`SOURCE_ID` do Bitrix)
-- **Páginas por esteira** — visão focada em Comercial Geral ou Comercial Econômico
+- **Visão geral comercial** — KPIs das duas esteiras, funis, evolução temporal, leads por equipe/diretoria e **leads por fonte** (`SOURCE_ID` do Bitrix)
+- **Páginas por esteira** — visão focada em Comercial Geral ou Comercial Econômico, com **Kanban operacional** (ver [Kanban operacional](#kanban-operacional))
 - **Leads por diretoria** — gráfico de barras horizontais por diretoria
 - **Funis comerciais** — etapas do pipeline com destaque apenas para fases com volume
 - **Gráficos interativos** — tooltips no hover, layout limpo
+
+### Kanban operacional (esteiras)
+
+Disponível em `/esteira-geral` e `/esteira-economico`:
+
+- **Kanban por fase** — colunas alinhadas ao funil do Bitrix, com cores das etapas
+- **Arrastar e soltar** — mover negociação de fase direto no CRM (`crm.deal.update`)
+- **Detalhes do lead** — modal com responsável, diretoria, roleta, origem e data de entrada
+- **Transferência individual** — reatribuir corretor pelo modal
+- **Transferência em lote** — selecionar vários cards e enviar para um corretor de uma vez
+- Cards exibem responsável, diretoria, roleta, origem e data
 
 ### Filtros
 
@@ -78,8 +90,9 @@ Cada diretoria agrupa equipes com seus respectivos usuários ativos. Filtros de 
 ### Exportação
 
 - Botão **Exportar** no header — PDF ou Excel com os filtros e dados atualmente aplicados
-- **Excel estruturado** — aba Resumo (KPIs, filtros, índice), abas por seção com ranking, percentual e linha de total; identidade visual HubON
+- **Excel estruturado** — aba Resumo, **Detalhamento** (lead a lead), Evolução e abas por seção com ranking, percentual e linha de total; identidade visual HubON
 - **PDF tabular** — relatório completo por seções; linhas com valor `0` são omitidas
+- **Detalhamento de leads** — tempo na esteira (desde a criação) e tempo sem atualizar com o corretor (desde a última modificação no CRM)
 - Exportações respeitam a página atual (visão geral ou esteira específica)
 
 ### Interface
@@ -98,6 +111,7 @@ Cada diretoria agrupa equipes com seus respectivos usuários ativos. Filtros de 
 | UI | [React 19](https://react.dev/) + [Tailwind CSS v4](https://tailwindcss.com/) |
 | Estado | [Zustand](https://zustand.docs.pmnd.rs/) (filtros + layout UI) |
 | Dados | [TanStack Query v5](https://tanstack.com/query) |
+| Kanban (DnD) | [@dnd-kit](https://dndkit.com/) |
 | Auth | [Supabase Auth](https://supabase.com/docs/guides/auth) + [@supabase/ssr](https://supabase.com/docs/guides/auth/server-side/nextjs) |
 | Gráficos | [Recharts](https://recharts.org/) + [ApexCharts](https://apexcharts.com/) |
 | Exportação | [jsPDF](https://github.com/parallax/jsPDF) + [jspdf-autotable](https://github.com/simonbengtsson/jsPDF-AutoTable), [xlsx-js-style](https://www.npmjs.com/package/xlsx-js-style) |
@@ -119,6 +133,7 @@ flowchart LR
 
     subgraph Vercel
         API_DASH["/api/dashboard"]
+        API_DEALS["/api/deals/*"]
         API_ORG["/api/org"]
         API_ROL["/api/roletas"]
         CACHE[(unstable_cache)]
@@ -133,6 +148,7 @@ flowchart LR
     UI --> RQ
     EXP --> RQ
     RQ --> API_DASH
+    RQ --> API_DEALS
     RQ --> API_ORG
     RQ --> API_ROL
     API_DASH --> CACHE
@@ -161,6 +177,7 @@ src/
 │   ├── api/
 │   │   ├── bitrix/[...path]/   # Proxy seguro para o webhook Bitrix
 │   │   ├── dashboard/          # Endpoint agregado do dashboard
+│   │   ├── deals/              # Mover fase e transferir corretor (unitário e lote)
 │   │   ├── org/                # Estrutura organizacional
 │   │   └── roletas/            # Roletas Stüpp (SPA entity 129)
 │   ├── esteira-geral/
@@ -173,8 +190,9 @@ src/
 │   ├── bitrixDepartments.ts    # Árvore de departamentos Stüpp
 │   └── bitrixStages.ts           # Catálogo de fases do funil
 ├── components/
-│   ├── charts/                 # Funil, fases, evolução, diretoria, origem
+│   ├── charts/                 # Funil, evolução, diretoria, origem
 │   ├── filters/                # Filtros + botão Aplicar + RoletaFilter
+│   ├── kanban/                 # LeadsKanbanBoard (DnD, modal, lote)
 │   ├── layout/                 # Sidebar, Header, ExportButton
 │   └── ui/                     # FilterPanel (drawer), KPICard, ChartCard...
 ├── hooks/
@@ -188,9 +206,14 @@ src/
 │   └── layoutUiStore.ts        # Sidebar / drawer de filtros
 └── utils/
     ├── aggregateLeads.ts       # Agregação dos dados
+    ├── buildKanbanBoards.ts    # Montagem e atualização dos boards
+    ├── buildLeadExportDetails.ts
+    ├── leadTiming.ts           # Cálculo de tempo na esteira / sem atualizar
     ├── exportDashboard.ts      # Contexto e seções de exportação
     └── excel/                  # Layout Excel estruturado
 lib/supabase/                   # Cliente browser, server e middleware Auth
+supabase/migrations/            # Migrações (ex.: profiles)
+scripts/seed-admin.mjs          # Criação do usuário admin inicial
 ```
 
 ---
@@ -233,9 +256,13 @@ NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID=64
 # Projeto: https://supabase.com/dashboard/project/vhtztzilrrlbflicmeft
 NEXT_PUBLIC_SUPABASE_URL=https://vhtztzilrrlbflicmeft.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon
+
+# Opcional — apenas para npm run seed:admin (nunca expor no frontend)
+SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
 ```
 
 > Crie usuários com `npm run seed:admin` (requer `SUPABASE_SERVICE_ROLE_KEY`) ou manualmente no painel Supabase.  
+> Aplique a migration em `supabase/migrations/` no projeto Supabase antes do primeiro login.  
 > Login por **nome de usuário** — o sistema converte internamente para `usuario@stupp.dashboard`.  
 > Admin inicial: usuário `admin` / senha `admin123`.
 
@@ -324,8 +351,36 @@ Resposta inclui, entre outros campos:
 | `byStage`, `bySource` | Fases do funil e fontes (`SOURCE_ID`) |
 | `funnelGeral`, `funnelEconomico` | Funis por esteira |
 | `overTime` | Evolução diária |
+| `kanbanBoards` | Boards do Kanban por esteira (cards por fase) |
+| `leadDetails` | Detalhamento para exportação (tempos na esteira e sem atualizar) |
 
 - Cache: **10 segundos** (por combinação de filtros)
+
+### `POST /api/deals/stage`
+
+Atualiza a fase de uma negociação no Bitrix (`STAGE_ID`).
+
+```json
+{ "dealId": "123", "stageId": "C16:NEW" }
+```
+
+### `POST /api/deals/assign`
+
+Transfere uma negociação para outro corretor (`ASSIGNED_BY_ID`).
+
+```json
+{ "dealId": "123", "assignedById": "456" }
+```
+
+### `POST /api/deals/assign/batch`
+
+Transfere várias negociações para o mesmo corretor.
+
+```json
+{ "dealIds": ["123", "456"], "assignedById": "789" }
+```
+
+Resposta inclui `succeeded` e `failed` para tratamento de falhas parciais.
 
 ### `POST/GET /api/bitrix/*`
 
@@ -352,14 +407,41 @@ O botão **Exportar** (header) gera relatórios com base nos **filtros aplicados
 
 | Formato | Conteúdo |
 |---------|----------|
-| **Excel (.xlsx)** | Aba Resumo + abas por seção (diretoria, equipe, fase, origem, funil, evolução) com ranking, `% do total`, totais e formatação HubON |
+| **Excel (.xlsx)** | Aba Resumo + **Detalhamento** (lead a lead) + Evolução + abas por seção (diretoria, equipe, fase, origem, funil) com ranking, `% do total`, totais e formatação HubON |
 | **PDF** | Relatório tabular por seções, com filtros aplicados no topo |
+
+### Detalhamento de leads (Excel e PDF)
+
+Cada lead exportado inclui:
+
+| Campo | Descrição |
+|-------|-----------|
+| Tempo na esteira | Desde `DATE_CREATE` até o momento da exportação |
+| Última atualização | `DATE_MODIFY` formatada |
+| Tempo sem atualizar | Dias/horas desde a última modificação no CRM (proxy de inatividade com o corretor) |
+
+Os leads são ordenados pelos **mais parados primeiro**, facilitando follow-up.
 
 Regras comuns:
 
-- Linhas com valor **0** são omitidas
+- Linhas com valor **0** são omitidas nas seções agregadas
 - Nome do arquivo: `dashboard-stupp-{pagina}-{data}.xlsx` / `.pdf`
 - A origem dos leads usa o campo **Fonte** do Bitrix (`SOURCE_ID`)
+
+---
+
+## Kanban operacional
+
+O Kanban aparece apenas nas páginas de esteira (`/esteira-geral` e `/esteira-economico`), logo abaixo do KPI.
+
+| Ação | Como usar |
+|------|-----------|
+| Ver detalhes | Clique no card |
+| Mudar fase | Arraste o card para outra coluna (ícone ⋮⋮) |
+| Transferir um lead | No modal → escolher corretor |
+| Transferir em lote | **Selecionar em lote** → marcar cards → **Transferir em lote** |
+
+Layout idêntico nas duas esteiras: KPI → Kanban → Funil + Evolução → Origem.
 
 ---
 
@@ -398,6 +480,7 @@ npm run dev        # Servidor de desenvolvimento (porta 3000)
 npm run build      # Build de produção
 npm start          # Servidor de produção
 npm run typecheck  # Verificação TypeScript
+npm run seed:admin # Cria usuário admin no Supabase (requer SERVICE_ROLE_KEY)
 ```
 
 ---

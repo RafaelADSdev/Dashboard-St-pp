@@ -1,6 +1,24 @@
 import { getTeamLabel, type StuppOrgStructure } from '@/api/bitrixDepartments'
 import type { StuppTeamOption } from '@/api/types'
 
+export interface StuppCorretorOption {
+  id: string
+  name: string
+  diretoria: string
+  equipe: string
+}
+
+export function getCorretorOptions(org: StuppOrgStructure): StuppCorretorOption[] {
+  return org.allUserIds
+    .map((id) => ({
+      id,
+      name: org.userToName[id] ?? `Usuário #${id}`,
+      diretoria: org.userToDiretoriaName[id] ?? 'Outros',
+      equipe: org.userToTeamName[id] ?? 'Sem equipe',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+}
+
 export function getEquipeOptions(org: StuppOrgStructure): StuppTeamOption[] {
   return org.diretorias.flatMap((diretoria) =>
     diretoria.teams.map((team) => ({
@@ -38,6 +56,7 @@ export function buildOrgPreview(org: StuppOrgStructure) {
   return {
     org,
     equipes: getEquipeOptions(org),
+    corretores: getCorretorOptions(org),
     diretorias: org.diretorias.map((d) => ({
       id: d.id,
       name: d.name,

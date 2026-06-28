@@ -1,7 +1,8 @@
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import type { FilterParams, LeadsDashboardData, StuppRoletaOption } from '@/api/types'
+import type { ExportLeadDetail, FilterParams, LeadsDashboardData, StuppRoletaOption } from '@/api/types'
 import type { OrgPreview } from '@/lib/orgPreview'
+import { computeDuration, formatBitrixDateDisplay } from '@/utils/leadTiming'
 
 export type ExportEsteira = 'TODAS' | 'GERAL' | 'ECONOMICO'
 
@@ -92,6 +93,35 @@ export function buildFilterLabels(
   }
 }
 
+function refreshLeadDetailTimings(
+  details: ExportLeadDetail[] | undefined,
+  reference: Date
+): ExportLeadDetail[] {
+  if (!details?.length) return []
+
+  return details
+    .map((lead) => {
+      const tempoNaEsteira = computeDuration(lead.dateCreateIso, reference)
+      const tempoSemAtualizar = computeDuration(lead.dateModifyIso, reference)
+
+      return {
+        ...lead,
+        dateCreate: formatBitrixDateDisplay(lead.dateCreateIso),
+        dateModify: formatBitrixDateDisplay(lead.dateModifyIso),
+        daysInPipeline: tempoNaEsteira.days,
+        tempoNaEsteira: tempoNaEsteira.label,
+        daysWithoutUpdate: tempoSemAtualizar.days,
+        tempoSemAtualizar: tempoSemAtualizar.label,
+      }
+    })
+    .sort(
+      (a, b) =>
+        b.daysWithoutUpdate - a.daysWithoutUpdate ||
+        b.daysInPipeline - a.daysInPipeline ||
+        a.title.localeCompare(b.title, 'pt-BR')
+    )
+}
+
 export function buildExportContext(
   pathname: string,
   filters: FilterParams,
@@ -101,14 +131,19 @@ export function buildExportContext(
 ): ExportContext {
   const merged = mergeFiltersForPage(pathname, filters)
   const esteira = resolveExportEsteira(pathname, merged)
+  const exportedAt = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+  const reference = new Date()
 
   return {
     pageTitle: resolvePageTitle(pathname),
     esteira,
     filters: merged,
     filterLabels: buildFilterLabels(merged, esteira, org, roletas),
-    data,
-    exportedAt: format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }),
+    data: {
+      ...data,
+      leadDetails: refreshLeadDetailTimings(data.leadDetails, reference),
+    },
+    exportedAt,
   }
 }
 
@@ -239,6 +274,32 @@ export function getPdfSections(ctx: ExportContext): PdfTableSection[] {
     head: ['Origem', 'Leads'],
     body: filterRowsByValue(ctx.data.bySource.map((row) => [row.source, row.count])),
   })
+
+  if ((ctx.data.leadDetails ?? []).length > 0) {
+    sections.push({
+      title: 'Detalhamento — tempo na esteira e sem atualizar',
+      head: [
+        'ID',
+        'Negociação',
+        'Esteira',
+        'Fase',
+        'Corretor',
+        'Tempo na esteira',
+        'Última atualização',
+        'Sem atualizar',
+      ],
+      body: ctx.data.leadDetails.map((lead) => [
+        lead.id,
+        lead.title,
+        lead.esteira,
+        lead.stage,
+        lead.corretor,
+        lead.tempoNaEsteira,
+        lead.dateModify,
+        lead.tempoSemAtualizar,
+      ]),
+    })
+  }
 
   return sections
 }

@@ -3,7 +3,7 @@ import { ROLETA_DEAL_FIELD } from './bitrixRoletas'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from './bitrixConfig'
 import { getTeamLabel, type StuppOrgStructure } from './bitrixDepartments'
 import type { BitrixStageDefinition } from './bitrixStages'
-import { normalizeStageId } from './bitrixStages'
+import { normalizeStageId, normalizeStageColor } from './bitrixStages'
 import { addDays, differenceInDays, format, parseISO } from 'date-fns'
 
 export type { BitrixLead }
@@ -28,7 +28,9 @@ interface BitrixDealRaw {
   STAGE_ID?: string
   CATEGORY_ID?: string | number
   DATE_CREATE?: string
+  DATE_MODIFY?: string
   SOURCE_ID?: string
+  [ROLETA_DEAL_FIELD]?: string
 }
 
 export function getBitrixWebhookUrl(): string {
@@ -103,19 +105,24 @@ export async function fetchStageDefinitions(
       STATUS_ID: string
       NAME: string
       SORT?: string
+      COLOR?: string
       SEMANTICS?: string | null
       EXTRA?: { SEMANTICS?: string }
     }[]
   }>(webhookUrl, 'crm.dealcategory.stage.list', { id: categoryId })
 
   return (data.result ?? [])
-    .map((stage) => ({
-      statusId: stage.STATUS_ID,
-      name: stage.NAME,
-      sort: Number(stage.SORT ?? 0),
-      categoryId,
-      semantics: stage.SEMANTICS ?? stage.EXTRA?.SEMANTICS ?? null,
-    }))
+    .map((stage) => {
+      const semantics = stage.SEMANTICS ?? stage.EXTRA?.SEMANTICS ?? null
+      return {
+        statusId: stage.STATUS_ID,
+        name: stage.NAME,
+        sort: Number(stage.SORT ?? 0),
+        categoryId,
+        semantics,
+        color: normalizeStageColor(stage.COLOR, semantics),
+      }
+    })
     .sort((a, b) => a.sort - b.sort)
 }
 
@@ -198,7 +205,9 @@ function normalizeDeal(
     stage_id: normalizeStageId(String(raw.STAGE_ID ?? ''), categoryId),
     category_id: categoryId,
     date_create: String(raw.DATE_CREATE ?? ''),
+    date_modify: String(raw.DATE_MODIFY ?? ''),
     source_id: String(raw.SOURCE_ID ?? ''),
+    roleta: String(raw[ROLETA_DEAL_FIELD] ?? '').trim(),
   }
 }
 
@@ -247,7 +256,9 @@ async function fetchDealPages(
           'STAGE_ID',
           'CATEGORY_ID',
           'DATE_CREATE',
+          'DATE_MODIFY',
           'SOURCE_ID',
+          ROLETA_DEAL_FIELD,
         ],
         order: { DATE_CREATE: 'DESC' },
         start,
@@ -383,4 +394,50 @@ export async function fetchEsteiraCounts(
     countDeals(webhookUrl, { ...baseParams, categoryIds: [ESTEIRA_ECONOMICO_ID] }),
   ])
   return { geral, economico, total: geral + economico }
+}
+
+export async function updateDealStage(
+  webhookUrl: string,
+  dealId: string,
+  stageId: string
+): Promise<void> {
+  await bitrixPost(webhookUrl, 'crm.deal.update', {
+    id: dealId,
+    fields: { STAGE_ID: stageId },
+  })
+}
+
+export async function updateDealAssignee(
+  webhookUrl: string,
+  dealId: string,
+  assignedById: string
+): Promise<void> {
+  await bitrixPost(webhookUrl, 'crm.deal.update', {
+    id: dealId,
+    fields: { ASSIGNED_BY_ID: assignedById },
+  })
+}
+
+export async function updateDealAssigneesBatch(
+  webhookUrl: string,
+  dealIds: string[],
+  assignedById: string
+): Promise<{ succeeded: string[]; failed: { dealId: string; error: string }[] }> {
+  const succeeded: string[] = []
+  const failed: { dealId: string; error: string }[] = []
+
+  for (const dealId of dealIds) {
+    try {
+      await updateDealAssignee(webhookUrl, dealId, assignedById)
+      succeeded.push(dealId)
+      await sleep(120)
+    } catch (error) {
+      failed.push({
+        dealId,
+        error: error instanceof Error ? error.message : 'Erro ao transferir',
+      })
+    }
+  }
+
+  return { succeeded, failed }
 }

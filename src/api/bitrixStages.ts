@@ -4,6 +4,7 @@ export interface BitrixStageDefinition {
   sort: number
   categoryId: string
   semantics: string | null
+  color: string
 }
 
 export interface StageCatalog {
@@ -50,6 +51,17 @@ export function resolveStageLabel(
   }
 
   return stageId
+}
+
+export function normalizeStageColor(color?: string | null, semantics?: string | null): string {
+  if (color?.trim()) {
+    const trimmed = color.trim()
+    return trimmed.startsWith('#') ? trimmed : `#${trimmed}`
+  }
+
+  if (semantics === 'S') return '#22c55e'
+  if (semantics === 'F') return '#ef4444'
+  return '#64748b'
 }
 
 export function groupByStageOrdered(

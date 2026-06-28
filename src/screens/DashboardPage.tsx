@@ -7,7 +7,6 @@ import { DiretoriaFilter } from '@/components/filters/DiretoriaFilter'
 import { EquipeFilter } from '@/components/filters/EquipeFilter'
 import { RoletaFilter } from '@/components/filters/RoletaFilter'
 import { LeadsByTeamPanel } from '@/components/charts/LeadsByTeamPanel'
-import { LeadsByStageChart } from '@/components/charts/LeadsByStageChart'
 import { LeadsBySourceChart } from '@/components/charts/LeadsBySourceChart'
 import { LeadsOverTimeChart } from '@/components/charts/LeadsOverTimeChart'
 import { PipelineFunnelChart } from '@/components/charts/PipelineFunnelChart'
@@ -84,10 +83,6 @@ export function DashboardPage() {
                     <PipelineFunnelChart data={data?.funnelGeral ?? []} />
                   </ChartCard>
                 </div>
-
-                <ChartCard title="Leads por fase do funil" description="Volume em cada estágio do CRM">
-                  <LeadsByStageChart data={data?.byStage ?? []} />
-                </ChartCard>
 
                 <ChartCard title="Leads por origem" description="Fonte de captação no CRM">
                   <LeadsBySourceChart data={data?.bySource ?? []} />

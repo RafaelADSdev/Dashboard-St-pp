@@ -13,6 +13,8 @@ import {
 import type { BitrixLead, DiretoriaSummary, FilterParams, LeadsDashboardData, StuppTeamOption, TeamDetail } from '@/api/types'
 import type { StuppOrgStructure } from '@/api/bitrixDepartments'
 import { getTeamLabel } from '@/api/bitrixDepartments'
+import { buildKanbanBoards } from '@/utils/buildKanbanBoards'
+import { buildLeadExportDetails } from '@/utils/buildLeadExportDetails'
 
 interface EsteiraCounts {
   total: number
@@ -106,6 +108,7 @@ export function aggregateLeadsData(
     teamDetails,
     byStage: buildByStageForFilter(filtered, filters.esteira, stageCatalog),
     bySource: groupBySource(filtered, sourceLabels),
+    kanbanBoards: buildKanbanBoards(filtered, filters.esteira, stageCatalog, sourceLabels),
     funnelEconomico: groupByStageOrdered(
       funnelEconomico,
       economicoStages,
@@ -119,6 +122,7 @@ export function aggregateLeadsData(
       ESTEIRA_GERAL_ID
     ),
     overTime: groupByDate(filtered),
+    leadDetails: buildLeadExportDetails(filtered, stageCatalog, sourceLabels),
     diretorias: org.diretorias.map((d) => d.name),
     equipes,
   }

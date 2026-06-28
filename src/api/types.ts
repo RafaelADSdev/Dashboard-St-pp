@@ -8,7 +8,9 @@ export interface BitrixLead {
   stage_id: string
   category_id: string
   date_create: string
+  date_modify: string
   source_id: string
+  roleta: string
 }
 
 export interface StuppTeamOption {
@@ -34,6 +36,55 @@ export interface TeamDetail {
   overTime: { date: string; economico: number; geral: number }[]
 }
 
+export interface KanbanCard {
+  id: string
+  title: string
+  assignedById: string
+  assignedByName: string
+  diretoria: string
+  roleta: string
+  source: string
+  equipe: string
+  dateCreate: string
+  categoryId: string
+}
+
+export interface KanbanStage {
+  id: string
+  name: string
+  color: string
+  sort: number
+  categoryId: string
+  semantics: string | null
+  cards: KanbanCard[]
+}
+
+export interface KanbanBoard {
+  categoryId: string
+  title: string
+  stages: KanbanStage[]
+}
+
+export interface ExportLeadDetail {
+  id: string
+  title: string
+  esteira: string
+  stage: string
+  corretor: string
+  diretoria: string
+  equipe: string
+  roleta: string
+  origem: string
+  dateCreateIso: string
+  dateModifyIso: string
+  dateCreate: string
+  daysInPipeline: number
+  tempoNaEsteira: string
+  dateModify: string
+  daysWithoutUpdate: number
+  tempoSemAtualizar: string
+}
+
 export interface LeadsDashboardData {
   totalLeads: number
   economicoCount: number
@@ -43,9 +94,11 @@ export interface LeadsDashboardData {
   teamDetails: TeamDetail[]
   byStage: { stage: string; count: number }[]
   bySource: { source: string; count: number }[]
+  kanbanBoards: KanbanBoard[]
   funnelEconomico: { x: string; y: number }[]
   funnelGeral: { x: string; y: number }[]
   overTime: { date: string; economico: number; geral: number }[]
+  leadDetails: ExportLeadDetail[]
   diretorias: string[]
   equipes: StuppTeamOption[]
 }

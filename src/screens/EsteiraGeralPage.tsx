@@ -6,7 +6,7 @@ import { DiretoriaFilter } from '@/components/filters/DiretoriaFilter'
 import { EquipeFilter } from '@/components/filters/EquipeFilter'
 import { RoletaFilter } from '@/components/filters/RoletaFilter'
 import { PipelineFunnelChart } from '@/components/charts/PipelineFunnelChart'
-import { LeadsByStageChart } from '@/components/charts/LeadsByStageChart'
+import { LeadsKanbanBoard } from '@/components/kanban/LeadsKanbanBoard'
 import { LeadsBySourceChart } from '@/components/charts/LeadsBySourceChart'
 import { LeadsOverTimeChart } from '@/components/charts/LeadsOverTimeChart'
 import { KPICard } from '@/components/cards/KPICard'
@@ -58,6 +58,14 @@ export function EsteiraGeralPage() {
                   <KPICard label="Comercial Geral" value={data?.geralCount ?? 0} color="emerald" />
                 </div>
 
+                <ChartCard
+                  title="Kanban — Comercial Geral"
+                  description="Clique no card para ver detalhes · Arraste para mudar a fase"
+                  className="overflow-hidden"
+                >
+                  <LeadsKanbanBoard boards={data?.kanbanBoards ?? []} expanded />
+                </ChartCard>
+
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                   <ChartCard title="Funil da esteira" description="Distribuição por etapa">
                     <PipelineFunnelChart data={data?.funnelGeral ?? []} />
@@ -66,10 +74,6 @@ export function EsteiraGeralPage() {
                     <LeadsOverTimeChart data={data?.overTime ?? []} esteira="geral" />
                   </ChartCard>
                 </div>
-
-                <ChartCard title="Leads por fase" description="Detalhamento por estágio do CRM">
-                  <LeadsByStageChart data={data?.byStage ?? []} />
-                </ChartCard>
 
                 <ChartCard title="Leads por origem" description="Fonte de captação no CRM">
                   <LeadsBySourceChart data={data?.bySource ?? []} />

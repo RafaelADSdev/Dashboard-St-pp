@@ -41,6 +41,7 @@ export interface StuppOrgStructure {
   userToTeamId: Record<string, string>
   userToTeamName: Record<string, string>
   userToDiretoriaName: Record<string, string>
+  userToName: Record<string, string>
 }
 
 function sleep(ms: number) {
@@ -360,12 +361,19 @@ export function buildStuppOrgStructure(
     userNames
   )
 
+  const allUserIds = stuppUsers.map((u) => String(u.ID))
+  const userToName: Record<string, string> = {}
+  for (const userId of allUserIds) {
+    userToName[userId] = userNames[userId] ?? `Usuário #${userId}`
+  }
+
   return {
     diretorias: diretorias.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
-    allUserIds: stuppUsers.map((u) => String(u.ID)),
+    allUserIds,
     userToTeamId,
     userToTeamName,
     userToDiretoriaName,
+    userToName,
   }
 }
 

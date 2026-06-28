@@ -17,9 +17,9 @@ export function getCategoryIdsForEsteira(esteira: string): string[] {
 }
 
 export function isEconomicoCategory(categoryId: string): boolean {
-  return categoryId === ESTEIRA_ECONOMICO_ID
+  return String(categoryId) === String(ESTEIRA_ECONOMICO_ID)
 }
 
 export function isGeralCategory(categoryId: string): boolean {
-  return categoryId === ESTEIRA_GERAL_ID
+  return String(categoryId) === String(ESTEIRA_GERAL_ID)
 }

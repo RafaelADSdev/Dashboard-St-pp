@@ -364,6 +364,84 @@ function buildEvolutionSheet(ctx: ExportContext): XLSX.WorkSheet | null {
   return sheet
 }
 
+function buildLeadDetailsSheet(ctx: ExportContext): XLSX.WorkSheet | null {
+  const leads = ctx.data.leadDetails ?? []
+  if (leads.length === 0) return null
+
+  const sheet: XLSX.WorkSheet = {}
+  const lastCol = 'M'
+  const headers = [
+    'ID',
+    'Negociação',
+    'Esteira',
+    'Fase',
+    'Corretor',
+    'Diretoria',
+    'Equipe',
+    'Roleta',
+    'Origem',
+    'Data entrada',
+    'Tempo na esteira',
+    'Última atualização',
+    'Tempo sem atualizar',
+  ]
+
+  setCell(sheet, 0, 0, 'Detalhamento de leads', titleStyle)
+  merge(sheet, 'A1', `${lastCol}1`)
+  setCell(
+    sheet,
+    1,
+    0,
+    'Tempo na esteira = desde a criação · Sem atualizar = dias parado com o corretor (última modificação no CRM)',
+    metaStyle
+  )
+  merge(sheet, 'A2', `${lastCol}2`)
+  setCell(sheet, 2, 0, `Exportado em ${ctx.exportedAt}`, metaStyle)
+  merge(sheet, 'A3', `${lastCol}3`)
+
+  const headerRow = 4
+  headers.forEach((header, col) => {
+    setCell(sheet, headerRow, col, header, headerStyle)
+  })
+
+  leads.forEach((lead, i) => {
+    const r = headerRow + 1 + i
+    const values: (string | number)[] = [
+      lead.id,
+      lead.title,
+      lead.esteira,
+      lead.stage,
+      lead.corretor,
+      lead.diretoria,
+      lead.equipe,
+      lead.roleta,
+      lead.origem,
+      lead.dateCreate,
+      lead.tempoNaEsteira,
+      lead.dateModify,
+      lead.tempoSemAtualizar,
+    ]
+    values.forEach((value, col) => {
+      const align = col === 0 ? 'center' : 'left'
+      setCell(sheet, r, col, value, bodyStyle(i % 2 === 1, align))
+    })
+  })
+
+  const totalRow = headerRow + 1 + leads.length
+  setCell(sheet, totalRow, 0, 'TOTAL', totalLabelStyle)
+  setCell(sheet, totalRow, 1, `${leads.length} lead(s)`, totalStyle)
+  for (let col = 2; col <= 12; col++) {
+    setCell(sheet, totalRow, col, '', totalStyle)
+  }
+
+  sheet['!ref'] = `A1:${lastCol}${totalRow + 1}`
+  setCols(sheet, [8, 32, 16, 18, 20, 16, 16, 14, 16, 18, 16, 18, 18])
+  sheet['!autofilter'] = { ref: `A${headerRow + 1}:${lastCol}${totalRow - 1}` }
+  sheet['!views'] = [{ state: 'frozen', ySplit: headerRow + 1, activeCell: 'B6' }]
+
+  return sheet
+}
+
 function collectTableSections(ctx: ExportContext): TableSection[] {
   const sections: TableSection[] = [
     {
@@ -425,16 +503,21 @@ export function buildExcelWorkbook(ctx: ExportContext): XLSX.WorkBook {
   const tabNames = tableSections.map((s) => sheetTabName(s.title))
 
   const evolution = buildEvolutionSheet(ctx)
-  if (evolution) tabNames.unshift('Evolução')
+  const leadDetails = buildLeadDetailsSheet(ctx)
 
-  XLSX.utils.book_append_sheet(
-    workbook,
-    buildSummarySheet(ctx, [...(evolution ? ['Evolução'] : []), ...tabNames.filter((n) => n !== 'Evolução')]),
-    'Resumo'
-  )
+  const sheetOrder: string[] = []
+  if (evolution) sheetOrder.push('Evolução')
+  if (leadDetails) sheetOrder.push('Detalhamento')
+  sheetOrder.push(...tabNames)
+
+  XLSX.utils.book_append_sheet(workbook, buildSummarySheet(ctx, sheetOrder), 'Resumo')
 
   if (evolution) {
     XLSX.utils.book_append_sheet(workbook, evolution, 'Evolução')
+  }
+
+  if (leadDetails) {
+    XLSX.utils.book_append_sheet(workbook, leadDetails, 'Detalhamento')
   }
 
   for (const section of tableSections) {

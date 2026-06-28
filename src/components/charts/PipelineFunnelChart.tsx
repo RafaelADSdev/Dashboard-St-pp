@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { STAGE_CHART_COLORS } from '@/lib/stageColors'
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
@@ -8,7 +9,7 @@ interface Props {
   data: { x: string; y: number }[]
 }
 
-const FUNNEL_COLORS = ['#f59e0b', '#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#22c55e', '#ef4444']
+const FUNNEL_COLORS = STAGE_CHART_COLORS
 
 export function PipelineFunnelChart({ data }: Props) {
   const chartData = data.filter((item) => item.y > 0)
