@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #fffbeb;
+  --color-brand-100: #fef3c7;
+  --color-brand-400: #fbbf24;
+  --color-brand-500: #f59e0b;
+  --color-brand-600: #d97706;
+  --color-surface: #f4f6f9;
+  --color-sidebar: #0c1222;
+  --color-sidebar-hover: #151d32;
+  --color-sidebar-active: #1a2540;
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-surface);
+  font-family: var(--font-sans);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #fef3c7;
+  color: #0c1222;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes loginSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loginFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-enter {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: loginSlideUp 0.5s ease forwards;
+}
+
+.login-enter-delay-1 { animation-delay: 0.05s; }
+.login-enter-delay-2 { animation-delay: 0.14s; }
+.login-enter-delay-3 { animation-delay: 0.2s; }
+.login-enter-delay-4 { animation-delay: 0.28s; }
+.login-enter-delay-5 { animation-delay: 0.35s; }
+.login-enter-delay-6 { animation-delay: 0.43s; }
+
+.login-bg-glow {
+  background:
+    radial-gradient(ellipse 80% 60% at 72% 38%, rgba(30, 58, 95, 0.85) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 45% at 88% 72%, rgba(245, 158, 11, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 35% at 60% 80%, rgba(37, 99, 235, 0.18) 0%, transparent 45%),
+    linear-gradient(135deg, #080f1a 0%, #0c1222 40%, #111c33 70%, #1e3a5f 100%);
+}

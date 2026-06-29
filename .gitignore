@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+.next
+.vercel
+.env
+dist-ssr
+*.local
+tsconfig.tsbuildinfo
+
+# Editor directories and files
+.cursor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.vercel
+.env*
+
+# Acessos do .project (referências locais — não commitar)
+.project/ACESSOS.md

@@ -1,0 +1,222 @@
+import { format, parseISO } from 'date-fns'
+import {
+  ESTEIRA_ECONOMICO_ID,
+  ESTEIRA_GERAL_ID,
+  isEconomicoCategory,
+  isGeralCategory,
+} from '@/api/bitrixConfig'
+import type { StageCatalog } from '@/api/bitrixStages'
+import {
+  groupByStageBreakdown,
+  groupByStageOrdered,
+} from '@/api/bitrixStages'
+import type { BitrixLead, DiretoriaSummary, FilterParams, LeadsDashboardData, StuppTeamOption, TeamDetail } from '@/api/types'
+import type { StuppOrgStructure } from '@/api/bitrixDepartments'
+import { getTeamLabel } from '@/api/bitrixDepartments'
+import { buildKanbanBoards } from '@/utils/buildKanbanBoards'
+import { buildLeadExportDetails } from '@/utils/buildLeadExportDetails'
+
+interface EsteiraCounts {
+  total: number
+  geral: number
+  economico: number
+}
+
+interface BreakdownCounts {
+  byDiretoria: DiretoriaSummary[]
+  byTeam: { equipe: string; leads: number }[]
+}
+
+export function aggregateLeadsData(
+  bitrixLeads: BitrixLead[],
+  filters: FilterParams,
+  stageCatalog: StageCatalog,
+  counts: EsteiraCounts,
+  org: StuppOrgStructure,
+  equipeOptions: StuppTeamOption[],
+  breakdownCounts?: BreakdownCounts,
+  sourceLabels: Record<string, string> = {}
+): LeadsDashboardData {
+  const { labels, geral: geralStages, economico: economicoStages } = stageCatalog
+
+  const allowedUserIds = new Set(
+    filters.equipe
+      ? (org.diretorias.flatMap((d) => d.teams).find((t) => t.id === filters.equipe)?.userIds ?? [])
+      : filters.diretoria
+        ? (org.diretorias
+            .find((d) => d.id === filters.diretoria || d.name === filters.diretoria)
+            ?.teams.flatMap((t) => t.userIds) ?? org.allUserIds)
+        : org.allUserIds
+  )
+
+  const filtered = bitrixLeads.filter((lead) => allowedUserIds.has(lead.assigned_by_id))
+
+  const teamLabels = new Map(
+    org.diretorias.flatMap((d) =>
+      d.teams.map((t) => [t.id, getTeamLabel(t)] as const)
+    )
+  )
+
+  const byTeam = groupBy(
+    filtered.map((lead) => ({
+      ...lead,
+      equipe:
+        teamLabels.get(org.userToTeamId[lead.assigned_by_id] ?? '') ??
+        lead.equipe,
+    })),
+    'equipe'
+  )
+  const funnelEconomico = filtered.filter((l) => isEconomicoCategory(l.category_id))
+  const funnelGeral = filtered.filter((l) => isGeralCategory(l.category_id))
+
+  const equipes = equipeOptions
+
+  const byDiretoriaFromLeads = org.diretorias.map((diretoria) => {
+    const userIds = new Set(diretoria.teams.flatMap((t) => t.userIds))
+    const leads = filtered.filter((l) => userIds.has(l.assigned_by_id)).length
+    return { id: diretoria.id, name: diretoria.name, leads }
+  })
+
+  const byTeamFromLeads = Object.entries(byTeam).map(([equipe, items]) => ({
+    equipe,
+    leads: items.length,
+  }))
+
+  const teamDetails: TeamDetail[] = org.diretorias.flatMap((diretoria) =>
+    diretoria.teams.map((team) => {
+      const teamLeads = filtered.filter((l) => team.userIds.includes(l.assigned_by_id))
+      const byStageForTeam = buildByStageForFilter(teamLeads, filters.esteira, stageCatalog)
+
+      return {
+        id: team.id,
+        label: getTeamLabel(team),
+        diretoria: diretoria.name,
+        leaderName: team.leaderName,
+        leads: teamLeads.length,
+        byStage: byStageForTeam,
+        overTime: groupByDate(teamLeads),
+      }
+    })
+  )
+
+  return {
+    totalLeads: counts.total,
+    economicoCount: counts.economico,
+    geralCount: counts.geral,
+    byTeam: breakdownCounts?.byTeam ?? byTeamFromLeads,
+    byDiretoria: breakdownCounts?.byDiretoria ?? byDiretoriaFromLeads,
+    teamDetails,
+    byStage: buildByStageForFilter(filtered, filters.esteira, stageCatalog),
+    bySource: groupBySource(filtered, sourceLabels),
+    kanbanBoards: buildKanbanBoards(filtered, filters.esteira, stageCatalog, sourceLabels),
+    funnelEconomico: groupByStageOrdered(
+      funnelEconomico,
+      economicoStages,
+      labels,
+      ESTEIRA_ECONOMICO_ID
+    ),
+    funnelGeral: groupByStageOrdered(
+      funnelGeral,
+      geralStages,
+      labels,
+      ESTEIRA_GERAL_ID
+    ),
+    overTime: groupByDate(filtered),
+    leadDetails: buildLeadExportDetails(filtered, stageCatalog, sourceLabels),
+    diretorias: org.diretorias.map((d) => d.name),
+    equipes,
+  }
+}
+
+function buildByStageForFilter(
+  leads: BitrixLead[],
+  esteira: string,
+  stageCatalog: StageCatalog
+) {
+  if (esteira === 'GERAL') {
+    return groupByStageBreakdown(
+      leads.filter((lead) => isGeralCategory(lead.category_id)),
+      stageCatalog.geral,
+      stageCatalog.labels,
+      ESTEIRA_GERAL_ID
+    )
+  }
+
+  if (esteira === 'ECONOMICO') {
+    return groupByStageBreakdown(
+      leads.filter((lead) => isEconomicoCategory(lead.category_id)),
+      stageCatalog.economico,
+      stageCatalog.labels,
+      ESTEIRA_ECONOMICO_ID
+    )
+  }
+
+  const geral = groupByStageBreakdown(
+    leads.filter((lead) => isGeralCategory(lead.category_id)),
+    stageCatalog.geral,
+    stageCatalog.labels,
+    ESTEIRA_GERAL_ID
+  )
+  const economico = groupByStageBreakdown(
+    leads.filter((lead) => isEconomicoCategory(lead.category_id)),
+    stageCatalog.economico,
+    stageCatalog.labels,
+    ESTEIRA_ECONOMICO_ID
+  )
+
+  return [...geral, ...economico]
+}
+
+function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
+  return arr.reduce(
+    (acc, item) => {
+      const k = String(item[key] ?? 'Sem valor')
+      acc[k] = [...(acc[k] ?? []), item]
+      return acc
+    },
+    {} as Record<string, T[]>
+  )
+}
+
+function groupBySource(
+  leads: BitrixLead[],
+  sourceLabels: Record<string, string>
+): { source: string; count: number }[] {
+  const counts: Record<string, number> = {}
+
+  for (const lead of leads) {
+    const key = lead.source_id || '__empty__'
+    counts[key] = (counts[key] ?? 0) + 1
+  }
+
+  return Object.entries(counts)
+    .map(([id, count]) => ({
+      source: id === '__empty__' ? 'Sem origem' : (sourceLabels[id] ?? id),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
+}
+
+function groupByDate(leads: BitrixLead[]) {
+  const dates: Record<string, { economico: number; geral: number }> = {}
+
+  for (const lead of leads) {
+    const dateKey = format(parseISO(lead.date_create), 'dd/MM')
+    if (!dates[dateKey]) {
+      dates[dateKey] = { economico: 0, geral: 0 }
+    }
+    if (isEconomicoCategory(lead.category_id)) {
+      dates[dateKey].economico += 1
+    } else if (isGeralCategory(lead.category_id)) {
+      dates[dateKey].geral += 1
+    }
+  }
+
+  return Object.entries(dates)
+    .map(([date, counts]) => ({ date, ...counts }))
+    .sort((a, b) => {
+      const [da, ma] = a.date.split('/').map(Number)
+      const [db, mb] = b.date.split('/').map(Number)
+      return ma - mb || da - db
+    })
+}
