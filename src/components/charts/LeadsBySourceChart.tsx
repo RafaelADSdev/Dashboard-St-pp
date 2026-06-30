@@ -11,6 +11,7 @@ import {
   Cell,
 } from 'recharts'
 import { useChartTheme } from '@/hooks/useChartTheme'
+import { ChartTooltip } from './ChartTooltip'
 
 const SOURCE_COLORS = ['#22c55e', '#3b82f6', '#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
 
@@ -42,7 +43,7 @@ export function LeadsBySourceChart({ data }: Props) {
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip contentStyle={chart.tooltip} cursor={{ fill: chart.cursor }} />
+        <Tooltip content={<ChartTooltip />} cursor={{ fill: chart.cursor }} />
         <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
           {data.map((_, i) => (
             <Cell key={i} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />

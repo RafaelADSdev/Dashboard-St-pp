@@ -18,13 +18,19 @@ export function useChartTheme() {
     tickSecondary: isDark ? '#cbd5e1' : '#475569',
     tooltip: {
       borderRadius: '12px',
-      border: isDark ? '1px solid #334155' : '1px solid #e2e8f0',
-      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-      color: isDark ? '#f1f5f9' : '#0f172a',
-      boxShadow: isDark
-        ? '0 4px 12px rgba(0, 0, 0, 0.35)'
-        : '0 4px 12px rgba(15, 23, 42, 0.08)',
+      border: '1px solid #e2e8f0',
+      backgroundColor: '#ffffff',
+      color: '#0f172a',
+      boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
       fontSize: '13px',
+    },
+    tooltipLabel: {
+      color: '#0f172a',
+      fontWeight: 600,
+      marginBottom: 4,
+    },
+    tooltipItem: {
+      color: '#334155',
     },
     cursor: isDark ? '#1e293b' : '#f8fafc',
     apexTheme: (isDark ? 'dark' : 'light') as 'dark' | 'light',

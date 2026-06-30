@@ -66,7 +66,7 @@ export function PipelineFunnelChart({ data }: Props) {
           },
         },
         tooltip: {
-          theme: chart.apexTheme,
+          theme: 'light',
           style: { fontSize: '13px' },
           y: { formatter: (val: number) => `${val} leads` },
         },

@@ -65,7 +65,7 @@ Cada diretoria agrupa equipes com seus respectivos usuários ativos. Filtros de 
 - **Páginas por esteira** — visão focada em Comercial Geral ou Comercial Econômico, com **Kanban operacional** (ver [Kanban operacional](#kanban-operacional))
 - **Leads por diretoria** — gráfico de barras horizontais por diretoria
 - **Funis comerciais** — etapas do pipeline com destaque apenas para fases com volume
-- **Gráficos interativos** — tooltips no hover, layout limpo
+- **Gráficos interativos** — tooltips brancos no hover (legíveis no modo escuro), layout limpo
 
 ### Kanban operacional (esteiras)
 
@@ -99,8 +99,8 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 ### Interface
 
 - **Modo claro e escuro** — toggle no header (ícone sol/lua); preferência salva no navegador e respeita o tema do sistema na primeira visita
-- Sidebar com logo Stüpp (versão escura no modo claro, versão branca no modo escuro), navegação entre visão geral e esteiras
-- Tela de login permanece sempre escura; usa a logo branca nativa
+- Sidebar com marcas **Stüpp | HubON** (logos adaptadas ao tema; versões brancas no modo escuro)
+- Tela de login permanece sempre escura; usa logos brancas nativas (Stüpp + HubON)
 - Paleta azul institucional, tipografia Plus Jakarta Sans; gráficos e cards adaptados ao tema ativo
 - Atualização automática dos dados a cada **10 segundos**
 
@@ -193,8 +193,8 @@ src/
 │   ├── bitrixDepartments.ts    # Árvore de departamentos Stüpp
 │   └── bitrixStages.ts           # Catálogo de fases do funil
 ├── components/
-│   ├── brand/                  # StuppLogo (troca automática claro/escuro)
-│   ├── charts/                 # Funil, evolução, diretoria, origem
+│   ├── brand/                  # StuppLogo + HubOnLogo (troca automática claro/escuro)
+│   ├── charts/                 # Funil, evolução, diretoria, origem + ChartTooltip
 │   ├── filters/                # Filtros + botão Aplicar + RoletaFilter
 │   ├── kanban/                 # LeadsKanbanBoard (DnD, modal, lote)
 │   ├── layout/                 # Sidebar, Header, ExportButton

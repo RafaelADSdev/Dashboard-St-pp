@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Building2, LayoutDashboard, PanelLeftClose, PanelLeftOpen, TrendingUp } from 'lucide-react'
 import clsx from 'clsx'
 import { StuppLogo } from '@/components/brand/StuppLogo'
+import { HubOnLogo } from '@/components/brand/HubOnLogo'
 import { useLayoutUiStore } from '@/store/layoutUiStore'
 
 const navItems = [
@@ -34,8 +35,10 @@ export function Sidebar() {
       >
         {sidebarOpen ? (
           <>
-            <Link href="/" className="block min-w-0 shrink" title="Superintendência Stüpp">
-              <StuppLogo priority />
+            <Link href="/" className="flex min-w-0 shrink items-center gap-3" title="Superintendência Stüpp">
+              <StuppLogo priority className="h-8 w-auto shrink-0" />
+              <div className="h-8 w-px shrink-0 bg-slate-200 dark:bg-white/15" aria-hidden />
+              <HubOnLogo priority className="h-7 w-auto shrink-0" />
             </Link>
             <button
               type="button"
