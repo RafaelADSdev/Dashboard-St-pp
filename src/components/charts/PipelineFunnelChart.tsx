@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { STAGE_CHART_COLORS } from '@/lib/stageColors'
+import { useChartTheme } from '@/hooks/useChartTheme'
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false })
 
@@ -12,11 +13,12 @@ interface Props {
 const FUNNEL_COLORS = STAGE_CHART_COLORS
 
 export function PipelineFunnelChart({ data }: Props) {
+  const chart = useChartTheme()
   const chartData = data.filter((item) => item.y > 0)
 
   if (chartData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[280px] text-sm text-slate-400">
+      <div className="flex items-center justify-center h-[280px] text-sm text-slate-400 dark:text-slate-500">
         Nenhum dado no período selecionado
       </div>
     )
@@ -47,24 +49,24 @@ export function PipelineFunnelChart({ data }: Props) {
           enabled: false,
         },
         grid: {
-          borderColor: '#f1f5f9',
+          borderColor: chart.grid,
           xaxis: { lines: { show: true } },
           yaxis: { lines: { show: false } },
         },
         xaxis: {
           categories: chartData.map((d) => d.x),
-          labels: { style: { colors: '#64748b', fontSize: '12px' } },
+          labels: { style: { colors: chart.tick, fontSize: '12px' } },
           axisBorder: { show: false },
           axisTicks: { show: false },
         },
         yaxis: {
           labels: {
-            style: { colors: '#475569', fontSize: '12px', fontWeight: 500 },
+            style: { colors: chart.tickSecondary, fontSize: '12px', fontWeight: 500 },
             maxWidth: 220,
           },
         },
         tooltip: {
-          theme: 'light',
+          theme: chart.apexTheme,
           style: { fontSize: '13px' },
           y: { formatter: (val: number) => `${val} leads` },
         },

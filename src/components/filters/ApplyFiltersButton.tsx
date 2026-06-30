@@ -63,7 +63,7 @@ export function ApplyFiltersButton({ ignoreEsteira = false, onApply }: Props) {
           ? 'bg-blue-800 text-white cursor-wait'
           : canApply
             ? 'bg-blue-900 text-white hover:bg-blue-950'
-            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            : 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500'
       )}
     >
       {isLoading ? (

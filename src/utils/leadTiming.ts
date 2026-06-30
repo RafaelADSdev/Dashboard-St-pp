@@ -25,6 +25,26 @@ export function formatBitrixDateDisplay(value: string): string {
   }
 }
 
+export function formatBitrixDateOnly(value: string): string {
+  const date = parseBitrixDate(value)
+  if (!date) return '—'
+  try {
+    return format(date, 'dd/MM/yyyy', { locale: ptBR })
+  } catch {
+    return '—'
+  }
+}
+
+export function formatBitrixTimeOnly(value: string): string {
+  const date = parseBitrixDate(value)
+  if (!date) return '—'
+  try {
+    return format(date, 'HH:mm', { locale: ptBR })
+  } catch {
+    return '—'
+  }
+}
+
 export function computeDuration(fromIso: string, reference = new Date()): DurationMetrics {
   const from = parseBitrixDate(fromIso)
   if (!from) return { days: 0, label: '—' }

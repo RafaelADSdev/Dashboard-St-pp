@@ -14,11 +14,11 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { format, parseISO } from 'date-fns'
 import {
   Building2,
   Calendar,
   CircleDot,
+  Clock,
   GripVertical,
   Loader2,
   Megaphone,
@@ -31,10 +31,17 @@ import {
   Users,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTheme } from 'next-themes'
 import type { KanbanBoard, KanbanCard, KanbanStage } from '@/api/types'
+import { isGeralCategoryId } from '@/lib/bitrixDealDates'
 import { useStuppStructurePreview } from '@/hooks/useStuppOrg'
 import type { StuppCorretorOption } from '@/lib/orgPreview'
 import { getStageChartColor, withAlpha } from '@/lib/stageColors'
+import {
+  formatBitrixDateDisplay,
+  formatBitrixDateOnly,
+  formatBitrixTimeOnly,
+} from '@/utils/leadTiming'
 import { moveKanbanCard, updateKanbanCardAssignee, updateKanbanCardsAssignee } from '@/utils/buildKanbanBoards'
 
 interface Props {
@@ -70,12 +77,7 @@ function cardDragId(cardId: string) {
 }
 
 function formatDealDate(value: string) {
-  if (!value) return '—'
-  try {
-    return format(parseISO(value), 'dd/MM/yyyy')
-  } catch {
-    return value
-  }
+  return formatBitrixDateDisplay(value)
 }
 
 function KanbanAssignCorretor({
@@ -126,27 +128,27 @@ function KanbanAssignCorretor({
   const selectedCorretor = available.find((corretor) => corretor.id === targetId)
 
   return (
-    <div className="border-t border-slate-100 px-4 py-4">
+    <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-4">
       <div className="mb-3 flex items-center gap-2">
         <ArrowRightLeft className="h-4 w-4 text-blue-700" />
-        <h4 className="text-sm font-semibold text-slate-800">{title}</h4>
+        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h4>
       </div>
 
       <div className="relative mb-2">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar corretor, equipe ou diretoria"
-          className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15"
+          className="h-9 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-200 outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15"
         />
       </div>
 
       <select
         value={targetId}
         onChange={(event) => setTargetId(event.target.value)}
-        className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15"
+        className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15"
       >
         <option value="">Selecione o novo responsável</option>
         {filtered.map((corretor) => (
@@ -157,13 +159,13 @@ function KanbanAssignCorretor({
       </select>
 
       {selectedCorretor ? (
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           {selectedCorretor.diretoria} · {selectedCorretor.equipe}
         </p>
       ) : null}
 
       {error ? (
-        <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           {error}
         </p>
       ) : null}
@@ -175,7 +177,7 @@ function KanbanAssignCorretor({
         className={clsx(
           'mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors',
           !selectedCorretor || isPending
-            ? 'cursor-not-allowed bg-slate-100 text-slate-400'
+            ? 'cursor-not-allowed bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
             : 'bg-blue-900 text-white hover:bg-blue-950'
         )}
       >
@@ -202,12 +204,22 @@ function KanbanLeadModal({
   transferError?: string
 }) {
   const { card, stageName, stageColor } = selected
+  const isGeral = isGeralCategoryId(card.categoryId)
   const fields = [
     { icon: UserRound, label: 'Responsável', value: card.assignedByName },
     { icon: Building2, label: 'Diretoria', value: card.diretoria },
     { icon: CircleDot, label: 'Roleta', value: card.roleta },
     { icon: Megaphone, label: 'Origem', value: card.source },
-    { icon: Calendar, label: 'Criado em', value: formatDealDate(card.dateCreate) },
+    { icon: Calendar, label: 'Chegou ao corretor', value: formatBitrixDateOnly(card.dateCreate) },
+    ...(isGeral
+      ? [
+          { icon: Calendar, label: 'Data', value: formatBitrixDateOnly(card.dateModify) },
+          { icon: Clock, label: 'Hora', value: formatBitrixTimeOnly(card.dateModify) },
+        ]
+      : [
+          { icon: Clock, label: 'Modificado em', value: formatDealDate(card.dateModify) },
+          { icon: UserRound, label: 'Modificado por', value: card.modifiedByName || '—' },
+        ]),
   ]
 
   useEffect(() => {
@@ -240,12 +252,12 @@ function KanbanLeadModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="kanban-lead-modal-title"
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="h-2 shrink-0" style={{ backgroundColor: stageColor }} />
 
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-5 py-4">
           <div className="min-w-0">
             <span
               className="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
@@ -255,16 +267,16 @@ function KanbanLeadModal({
             </span>
             <h2
               id="kanban-lead-modal-title"
-              className="mt-2 text-lg font-semibold leading-snug text-slate-900"
+              className="mt-2 text-lg font-semibold leading-snug text-slate-900 dark:text-slate-100"
             >
               {card.title}
             </h2>
-            <p className="mt-1 text-xs text-slate-400">Negócio #{card.id}</p>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Negócio #{card.id}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-2 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -276,13 +288,13 @@ function KanbanLeadModal({
             {fields.map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
-                className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3"
+                className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-900/50"
               >
-                <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                   <Icon className="h-3.5 w-3.5" aria-hidden />
                   {label}
                 </dt>
-                <dd className="mt-1.5 text-sm leading-snug text-slate-800 wrap-break-word">{value}</dd>
+                <dd className="mt-1.5 text-sm leading-snug text-slate-800 dark:text-slate-200 wrap-break-word">{value}</dd>
               </div>
             ))}
           </dl>
@@ -343,26 +355,26 @@ function KanbanBatchModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="kanban-batch-modal-title"
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-5 py-4">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-200">
               <Users className="h-3.5 w-3.5" />
               Transferência em lote
             </div>
-            <h2 id="kanban-batch-modal-title" className="text-lg font-semibold text-slate-900">
+            <h2 id="kanban-batch-modal-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Transferir {count} lead{count === 1 ? '' : 's'}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Escolha o corretor que passará a ser responsável por todas as negociações selecionadas.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-2 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -425,10 +437,11 @@ function KanbanDealCard({
         boxShadow: isOverlay ? `0 10px 24px ${withAlpha(stageColor, 0.22)}` : undefined,
       }}
       className={clsx(
-        'rounded-lg border border-slate-200 border-l-4 bg-white shadow-sm transition-all',
-        (isDetailSelected || isBatchSelected) && 'ring-2 ring-blue-500/40 ring-offset-1',
-        isBatchSelected && batchMode && 'bg-blue-50/40',
-        isOverlay && 'rotate-1 ring-2 ring-white/80',
+        'rounded-lg border border-slate-200 border-l-4 bg-white shadow-sm transition-all dark:border-slate-600/80 dark:bg-slate-800 dark:shadow-black/20',
+        (isDetailSelected || isBatchSelected) &&
+          'ring-2 ring-blue-500/40 ring-offset-1 dark:ring-offset-slate-900',
+        isBatchSelected && batchMode && 'bg-blue-50/40 dark:bg-blue-950/35',
+        isOverlay && 'rotate-1 ring-2 ring-white/80 dark:ring-slate-500/60',
         isDragging && !isOverlay && 'opacity-35'
       )}
     >
@@ -437,19 +450,19 @@ function KanbanDealCard({
           <button
             type="button"
             onClick={() => onToggleBatch?.(card)}
-            className="mt-1 shrink-0 rounded p-0.5 text-blue-700 transition-colors hover:bg-blue-50"
+            className="mt-1 shrink-0 rounded p-0.5 text-blue-700 transition-colors hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/50"
             aria-label={isBatchSelected ? 'Desmarcar lead' : 'Selecionar lead'}
           >
             {isBatchSelected ? (
               <CheckSquare className="h-4 w-4" />
             ) : (
-              <Square className="h-4 w-4 text-slate-400" />
+              <Square className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             )}
           </button>
         ) : (
           <button
             type="button"
-            className="mt-1 shrink-0 cursor-grab rounded p-0.5 text-slate-300 transition-colors hover:bg-slate-50 hover:text-slate-500 active:cursor-grabbing"
+            className="mt-1 shrink-0 cursor-grab rounded p-0.5 text-slate-300 dark:text-slate-600 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-500 dark:hover:text-slate-400 active:cursor-grabbing"
             aria-label={`Mover ${card.title}`}
             {...listeners}
             {...attributes}
@@ -463,19 +476,50 @@ function KanbanDealCard({
           onClick={() => (batchMode ? onToggleBatch?.(card) : onSelect?.(card))}
           className="min-w-0 flex-1 text-left"
         >
-          <h4 className="text-[13px] font-semibold leading-snug text-slate-900">{card.title}</h4>
-          <p className="mt-1 truncate text-xs text-slate-600">{card.assignedByName}</p>
-          <p className="mt-0.5 truncate text-[11px] text-slate-400">{card.diretoria}</p>
+          <h4 className="text-[13px] font-semibold leading-snug text-slate-900 dark:text-slate-100">{card.title}</h4>
+          <p className="mt-1 truncate text-xs text-slate-600 dark:text-slate-400">{card.assignedByName}</p>
+          <p className="mt-0.5 truncate text-[11px] text-slate-400 dark:text-slate-500">{card.diretoria}</p>
+          <div className="mt-1.5 space-y-0.5 text-[10px] leading-tight text-slate-400 dark:text-slate-500">
+            <p>
+              <span className="font-medium text-slate-500 dark:text-slate-400">Chegou:</span>{' '}
+              {formatBitrixDateOnly(card.dateCreate)}
+            </p>
+            {isGeralCategoryId(card.categoryId) ? (
+              <>
+                <p>
+                  <span className="font-medium text-slate-500 dark:text-slate-400">Data:</span>{' '}
+                  {formatBitrixDateOnly(card.dateModify)}
+                </p>
+                <p>
+                  <span className="font-medium text-slate-500 dark:text-slate-400">Hora:</span>{' '}
+                  {formatBitrixTimeOnly(card.dateModify)}
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  <span className="font-medium text-slate-500 dark:text-slate-400">Modificado em:</span>{' '}
+                  {formatBitrixDateOnly(card.dateModify)} · {formatBitrixTimeOnly(card.dateModify)}
+                </p>
+                {card.modifiedByName && card.modifiedByName !== 'Sem registro' ? (
+                  <p className="truncate">
+                    <span className="font-medium text-slate-500 dark:text-slate-400">Por:</span>{' '}
+                    {card.modifiedByName}
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
           <div className="mt-2 flex flex-wrap gap-1">
             <span
               className="max-w-full truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium"
-              style={{ backgroundColor: withAlpha(stageColor, 0.12), color: stageColor }}
+              style={{ backgroundColor: withAlpha(stageColor, 0.18), color: stageColor }}
               title={card.roleta}
             >
               {card.roleta}
             </span>
             <span
-              className="max-w-full truncate rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
+              className="max-w-full truncate rounded-md bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-400"
               title={card.source}
             >
               {card.source}
@@ -508,7 +552,11 @@ function KanbanColumn({
   onToggleBatch: (card: KanbanCard) => void
   expanded?: boolean
 }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   const stageColor = getStageChartColor(stageIndex)
+  const columnBase = isDark ? '#1e293b' : '#ffffff'
+  const columnBodyTint = withAlpha(stageColor, isDark ? 0.1 : 0.03)
 
   const { setNodeRef, isOver } = useDroppable({
     id: columnDropId(boardCategoryId, stage.id),
@@ -522,19 +570,19 @@ function KanbanColumn({
         boxShadow: isOver ? `0 0 0 2px ${withAlpha(stageColor, 0.35)}` : undefined,
       }}
       className={clsx(
-        'flex w-[320px] shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm',
+        'flex w-[320px] shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-600/80 dark:bg-slate-900/60',
         isOver && 'ring-2 ring-inset'
       )}
     >
       <header
-        className="border-b border-slate-200 bg-white"
+        className="border-b border-slate-200 dark:border-slate-600/80"
         style={{
-          background: `linear-gradient(180deg, ${withAlpha(stageColor, 0.14)} 0%, #ffffff 100%)`,
+          background: `linear-gradient(180deg, ${withAlpha(stageColor, isDark ? 0.22 : 0.14)} 0%, ${columnBase} 100%)`,
         }}
       >
         <div className="h-2.5" style={{ backgroundColor: stageColor }} />
         <div className="flex items-start justify-between gap-2 px-3 py-3">
-          <h3 className="line-clamp-2 flex-1 text-sm font-semibold leading-snug text-slate-800">
+          <h3 className="line-clamp-2 flex-1 text-sm font-semibold leading-snug text-slate-800 dark:text-slate-200">
             {stage.name}
           </h3>
           <span
@@ -551,10 +599,10 @@ function KanbanColumn({
           'flex min-h-[140px] flex-1 flex-col gap-2 overflow-y-auto p-2',
           expanded ? 'max-h-[620px]' : 'max-h-[480px]'
         )}
-        style={{ backgroundColor: withAlpha(stageColor, 0.03) }}
+        style={{ backgroundColor: columnBodyTint }}
       >
         {stage.cards.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-200 bg-white/80 px-2 py-10 text-center text-xs text-slate-400">
+          <p className="rounded-lg border border-dashed border-slate-200 bg-white/80 px-2 py-10 text-center text-xs text-slate-400 dark:border-slate-600 dark:bg-slate-800/50 dark:text-slate-500">
             Sem negociações
           </p>
         ) : (
@@ -634,7 +682,7 @@ function KanbanBoardView({
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="relative min-w-0 flex-1">
         {isMoving ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/60 backdrop-blur-[1px]">
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800/60 backdrop-blur-[1px]">
             <Loader2 className="h-5 w-5 animate-spin text-blue-700" />
           </div>
         ) : null}
@@ -918,23 +966,23 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
 
   if (localBoards.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-slate-500">Nenhuma fase disponível no CRM.</p>
+      <p className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">Nenhuma fase disponível no CRM.</p>
     )
   }
 
   return (
     <div className="space-y-4">
       {error ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           {error}
         </p>
       ) : null}
 
       {batchMode ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-3 dark:border-blue-800/60 dark:bg-blue-950/35 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-blue-950">Modo lote ativo</p>
-            <p className="text-xs text-blue-800/80">
+            <p className="text-sm font-semibold text-blue-950 dark:text-blue-100">Modo lote ativo</p>
+            <p className="text-xs text-blue-800/80 dark:text-blue-300/80">
               {batchCount === 0
                 ? 'Marque os leads que deseja transferir'
                 : `${batchCount} lead${batchCount === 1 ? '' : 's'} selecionado${batchCount === 1 ? '' : 's'}`}
@@ -945,7 +993,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
               type="button"
               onClick={() => setBatchSelectedIds(new Set())}
               disabled={batchCount === 0}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-blue-900 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-blue-900 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-blue-200 dark:hover:bg-blue-900/50"
             >
               Limpar
             </button>
@@ -960,7 +1008,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
             <button
               type="button"
               onClick={handleCancelBatchMode}
-              className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-blue-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               Cancelar
             </button>
@@ -971,7 +1019,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
           <button
             type="button"
             onClick={handleStartBatchMode}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <Users className="h-4 w-4" />
             Selecionar em lote
@@ -982,7 +1030,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
       {localBoards.map((board) => (
         <div key={board.categoryId} className="space-y-3">
           {localBoards.length > 1 ? (
-            <h3 className="text-sm font-semibold text-slate-700">{board.title}</h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{board.title}</h3>
           ) : null}
 
           <KanbanBoardView
@@ -1021,7 +1069,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
         />
       ) : null}
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-400 dark:text-slate-500">
         {batchMode
           ? 'Marque os cards desejados e use “Transferir em lote” · Arraste pelo ícone ⋮⋮ fora do modo lote'
           : 'Clique no card para abrir os detalhes · Use “Selecionar em lote” para transferir vários leads'}

@@ -107,12 +107,12 @@ export function LoginForm() {
         <div className="login-enter login-enter-delay-1 mb-10 sm:mb-11">
           <div className="flex items-center gap-5">
             <Image
-              src="/stupp-logo.png"
+              src="/stupp-logo-white.png"
               alt="Superintendência Stüpp"
               width={180}
               height={52}
               priority
-              className="h-11 w-auto brightness-0 invert sm:h-12"
+              className="h-11 w-auto sm:h-12"
             />
             <div className="h-10 w-px bg-white/15" />
             <Image

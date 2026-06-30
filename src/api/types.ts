@@ -9,6 +9,10 @@ export interface BitrixLead {
   category_id: string
   date_create: string
   date_modify: string
+  date_arrived: string
+  date_last_movement: string
+  modified_by_id: string
+  modified_by_name: string
   source_id: string
   roleta: string
 }
@@ -46,6 +50,8 @@ export interface KanbanCard {
   source: string
   equipe: string
   dateCreate: string
+  dateModify: string
+  modifiedByName: string
   categoryId: string
 }
 

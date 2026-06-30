@@ -73,10 +73,10 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 
 - **Kanban por fase** — colunas alinhadas ao funil do Bitrix, com cores das etapas
 - **Arrastar e soltar** — mover negociação de fase direto no CRM (`crm.deal.update`)
-- **Detalhes do lead** — modal com responsável, diretoria, roleta, origem e data de entrada
+- **Detalhes do lead** — modal com responsável, diretoria, roleta, origem e datas de chegada/movimentação (campos variam por esteira; ver [Kanban operacional](#kanban-operacional))
 - **Transferência individual** — reatribuir corretor pelo modal
 - **Transferência em lote** — selecionar vários cards e enviar para um corretor de uma vez
-- Cards exibem responsável, diretoria, roleta, origem e data
+- Cards exibem responsável, diretoria, roleta, origem e **datas de chegada e última movimentação** (formato diferente por esteira)
 
 ### Filtros
 
@@ -85,6 +85,7 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 - **Diretoria e equipe** — recorte pela estrutura org da Stüpp
 - **Roleta** — filtro por roletas Stüpp cadastradas no SPA Bitrix (entity type `129`), excluindo roletas inativas/descartadas
 - Modo **rascunho → Aplicar filtros**, com feedback visual durante o carregamento
+- **Limpar filtros** — botão no rodapé do painel de filtros (drawer lateral)
 - Painel de filtros em **drawer lateral**; sidebar recolhível
 
 ### Exportação
@@ -97,8 +98,10 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 
 ### Interface
 
-- Sidebar com logo Stüpp, navegação entre visão geral e esteiras
-- Paleta azul institucional, tipografia Plus Jakarta Sans
+- **Modo claro e escuro** — toggle no header (ícone sol/lua); preferência salva no navegador e respeita o tema do sistema na primeira visita
+- Sidebar com logo Stüpp (versão escura no modo claro, versão branca no modo escuro), navegação entre visão geral e esteiras
+- Tela de login permanece sempre escura; usa a logo branca nativa
+- Paleta azul institucional, tipografia Plus Jakarta Sans; gráficos e cards adaptados ao tema ativo
 - Atualização automática dos dados a cada **10 segundos**
 
 ---
@@ -108,7 +111,7 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 | Camada | Tecnologia |
 |--------|------------|
 | Framework | [Next.js 16](https://nextjs.org/) (App Router + Turbopack) |
-| UI | [React 19](https://react.dev/) + [Tailwind CSS v4](https://tailwindcss.com/) |
+| UI | [React 19](https://react.dev/) + [Tailwind CSS v4](https://tailwindcss.com/) + [next-themes](https://github.com/pacocoursey/next-themes) |
 | Estado | [Zustand](https://zustand.docs.pmnd.rs/) (filtros + layout UI) |
 | Dados | [TanStack Query v5](https://tanstack.com/query) |
 | Kanban (DnD) | [@dnd-kit](https://dndkit.com/) |
@@ -190,16 +193,21 @@ src/
 │   ├── bitrixDepartments.ts    # Árvore de departamentos Stüpp
 │   └── bitrixStages.ts           # Catálogo de fases do funil
 ├── components/
+│   ├── brand/                  # StuppLogo (troca automática claro/escuro)
 │   ├── charts/                 # Funil, evolução, diretoria, origem
 │   ├── filters/                # Filtros + botão Aplicar + RoletaFilter
 │   ├── kanban/                 # LeadsKanbanBoard (DnD, modal, lote)
 │   ├── layout/                 # Sidebar, Header, ExportButton
+│   ├── theme/                  # ThemeProvider + ThemeToggle
 │   └── ui/                     # FilterPanel (drawer), KPICard, ChartCard...
 ├── hooks/
+│   ├── useChartTheme.ts        # Cores de gráficos conforme tema ativo
 │   ├── useLeadsData.ts
 │   ├── useStuppOrg.ts
 │   └── useStuppRoletas.ts
-├── lib/server/                 # Cache, buildDashboardData, webhook
+├── lib/
+│   ├── bitrixDealDates.ts      # Datas do kanban por esteira (campos Bitrix)
+│   └── server/                 # Cache, buildDashboardData, webhook
 ├── screens/                    # DashboardPage, EsteiraGeral, EsteiraEconomico
 ├── store/
 │   ├── filterStore.ts          # Filtros rascunho vs aplicados
@@ -395,7 +403,8 @@ Os filtros funcionam em modo **rascunho → aplicar**:
 1. Abra o painel de filtros pelo botão no header
 2. Ajuste período, esteira, diretoria, equipe e/ou roleta
 3. Clique em **Aplicar filtros** (botão fica azul quando há alterações pendentes)
-4. Os dados são recarregados com a combinação selecionada
+4. Use **Limpar filtros** no rodapé do painel para voltar ao padrão
+5. Os dados são recarregados com a combinação selecionada
 
 Na primeira visita, o período padrão (**últimos 7 dias**) já é aplicado automaticamente.
 
@@ -416,9 +425,9 @@ Cada lead exportado inclui:
 
 | Campo | Descrição |
 |-------|-----------|
-| Tempo na esteira | Desde `DATE_CREATE` até o momento da exportação |
-| Última atualização | `DATE_MODIFY` formatada |
-| Tempo sem atualizar | Dias/horas desde a última modificação no CRM (proxy de inatividade com o corretor) |
+| Tempo na esteira | Desde a data de chegada ao corretor até o momento da exportação |
+| Última atualização | Data/hora da última movimentação (campos Bitrix por esteira) |
+| Tempo sem atualizar | Dias/horas desde a última movimentação (proxy de inatividade com o corretor) |
 
 Os leads são ordenados pelos **mais parados primeiro**, facilitando follow-up.
 
@@ -441,6 +450,17 @@ O Kanban aparece apenas nas páginas de esteira (`/esteira-geral` e `/esteira-ec
 | Transferir um lead | No modal → escolher corretor |
 | Transferir em lote | **Selecionar em lote** → marcar cards → **Transferir em lote** |
 
+### Datas nos cards (por esteira)
+
+Os campos exibidos seguem o que cada esteira registra no Bitrix (`src/lib/bitrixDealDates.ts`):
+
+| Esteira | Chegou ao corretor | Última movimentação |
+|---------|-------------------|---------------------|
+| **Comercial Econômico** | `DATE_CREATE` | `DATE_MODIFY` + **Modificado por** (`MODIFY_BY_ID`) |
+| **Comercial Geral** | `UF_CRM_1738332137` (Data - Novos Leads) ou Data de Entrada | Maior data entre as fases do funil (`UF_CRM_173833*`) ou `MOVED_TIME` / `DATE_MODIFY` — exibida como **Data** e **Hora** no card |
+
+Ao arrastar um card para outra fase, a data de última movimentação é atualizada localmente até o próximo refresh.
+
 Layout idêntico nas duas esteiras: KPI → Kanban → Funil + Evolução → Origem.
 
 ---
@@ -451,7 +471,7 @@ Layout idêntico nas duas esteiras: KPI → Kanban → Funil + Evolução → Or
 |------------|---------|
 | API única | Uma requisição HTTP do cliente por carregamento |
 | Cache de org / fases / fontes / roletas | Cacheados por **24 horas** |
-| Cache de dashboard | Resposta agregada cacheada por **10 segundos** |
+| Cache de dashboard | Resposta agregada cacheada por **10 segundos** (`dashboard-data-v5`) |
 | Filtro no Bitrix | `ASSIGNED_BY_ID` e roleta enviados na query quando aplicável |
 | Limite de 500 registros | Split por esteira e por datas; contagens via `countDeals` para breakdowns |
 | Prefetch | Estrutura org e roletas carregadas em background |

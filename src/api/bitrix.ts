@@ -1,6 +1,11 @@
 import type { BitrixLead } from './types'
 import { ROLETA_DEAL_FIELD } from './bitrixRoletas'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from './bitrixConfig'
+import {
+  BITRIX_DEAL_EXTRA_SELECT,
+  resolveDealArrivedAt,
+  resolveDealLastMovementAt,
+} from '@/lib/bitrixDealDates'
 import { getTeamLabel, type StuppOrgStructure } from './bitrixDepartments'
 import type { BitrixStageDefinition } from './bitrixStages'
 import { normalizeStageId, normalizeStageColor } from './bitrixStages'
@@ -29,8 +34,11 @@ interface BitrixDealRaw {
   CATEGORY_ID?: string | number
   DATE_CREATE?: string
   DATE_MODIFY?: string
+  MODIFY_BY_ID?: string | number
+  MOVED_TIME?: string
   SOURCE_ID?: string
   [ROLETA_DEAL_FIELD]?: string
+  [key: string]: string | number | undefined
 }
 
 export function getBitrixWebhookUrl(): string {
@@ -193,6 +201,7 @@ function normalizeDeal(
   userToDiretoriaName: Record<string, string>
 ): BitrixLead {
   const assignedId = String(raw.ASSIGNED_BY_ID ?? '')
+  const modifyById = String(raw.MODIFY_BY_ID ?? '')
   const categoryId = String(raw.CATEGORY_ID ?? '0')
 
   return {
@@ -206,6 +215,11 @@ function normalizeDeal(
     category_id: categoryId,
     date_create: String(raw.DATE_CREATE ?? ''),
     date_modify: String(raw.DATE_MODIFY ?? ''),
+    date_arrived: resolveDealArrivedAt(raw, categoryId),
+    date_last_movement: resolveDealLastMovementAt(raw, categoryId),
+    modified_by_id: modifyById,
+    modified_by_name:
+      userNames[modifyById] ?? (modifyById ? `Usuário #${modifyById}` : 'Sem registro'),
     source_id: String(raw.SOURCE_ID ?? ''),
     roleta: String(raw[ROLETA_DEAL_FIELD] ?? '').trim(),
   }
@@ -259,6 +273,7 @@ async function fetchDealPages(
           'DATE_MODIFY',
           'SOURCE_ID',
           ROLETA_DEAL_FIELD,
+          ...BITRIX_DEAL_EXTRA_SELECT,
         ],
         order: { DATE_CREATE: 'DESC' },
         start,
@@ -372,6 +387,9 @@ export async function fetchLeadsFromBitrix(
   for (const deal of allDeals) {
     if (deal.ASSIGNED_BY_ID) {
       userIds.add(String(deal.ASSIGNED_BY_ID))
+    }
+    if (deal.MODIFY_BY_ID) {
+      userIds.add(String(deal.MODIFY_BY_ID))
     }
   }
 

@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
+import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { useFilterStore } from '@/store/filterStore'
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -47,5 +48,9 @@ export function Providers({ children }: { children: ReactNode }) {
     })
   }, [initDates, queryClient, isLogin])
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ThemeProvider>
+  )
 }

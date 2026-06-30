@@ -25,7 +25,9 @@ function toKanbanCard(lead: BitrixLead, sourceLabels: Record<string, string>): K
     roleta: lead.roleta || 'Sem roleta',
     source: resolveSourceLabel(lead.source_id, sourceLabels),
     equipe: lead.equipe,
-    dateCreate: lead.date_create,
+    dateCreate: lead.date_arrived || lead.date_create,
+    dateModify: lead.date_last_movement || lead.date_modify || lead.date_create,
+    modifiedByName: lead.modified_by_name,
     categoryId: lead.category_id,
   }
 }
@@ -164,7 +166,13 @@ export function moveKanbanCard(
     ...board,
     stages: board.stages.map((stage) =>
       stage.id === targetStageId
-        ? { ...stage, cards: [movedCard!, ...stage.cards] }
+        ? {
+            ...stage,
+            cards: [
+              { ...movedCard!, dateModify: new Date().toISOString() },
+              ...stage.cards,
+            ],
+          }
         : stage
     ),
   }))

@@ -16,7 +16,7 @@ export function buildLeadExportDetails(
   return leads
     .map((lead) => {
       const tempoNaEsteira = computeDuration(lead.date_create, reference)
-      const lastActivity = lead.date_modify || lead.date_create
+      const lastActivity = lead.date_last_movement || lead.date_modify || lead.date_create
       const tempoSemAtualizar = computeDuration(lastActivity, reference)
 
       return {

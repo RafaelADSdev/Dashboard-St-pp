@@ -10,20 +10,15 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { useChartTheme } from '@/hooks/useChartTheme'
 
 interface Props {
   data: { date: string; economico: number; geral: number }[]
   esteira?: 'both' | 'geral' | 'economico'
 }
 
-const tooltipStyle = {
-  borderRadius: '12px',
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
-  fontSize: '13px',
-}
-
 export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
+  const chart = useChartTheme()
   const showEconomico = esteira === 'both' || esteira === 'economico'
   const showGeral = esteira === 'both' || esteira === 'geral'
 
@@ -40,13 +35,13 @@ export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
             <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-        <Tooltip contentStyle={tooltipStyle} />
+        <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+        <XAxis dataKey="date" tick={{ fontSize: 11, fill: chart.tick }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: chart.tick }} axisLine={false} tickLine={false} />
+        <Tooltip contentStyle={chart.tooltip} />
         {esteira === 'both' && (
           <Legend
-            wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }}
+            wrapperStyle={{ fontSize: '12px', paddingTop: '12px', color: chart.isDark ? '#f1f5f9' : '#0f172a' }}
             iconType="circle"
           />
         )}
