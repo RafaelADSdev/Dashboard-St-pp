@@ -43,7 +43,7 @@ export function LeadsBySourceChart({ data }: Props) {
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: chart.cursor }} />
+        <Tooltip content={ChartTooltip} cursor={{ fill: chart.cursor }} />
         <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
           {data.map((_, i) => (
             <Cell key={i} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />

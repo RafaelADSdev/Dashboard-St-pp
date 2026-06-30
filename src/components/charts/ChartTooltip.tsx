@@ -1,10 +1,8 @@
 'use client'
 
-import type { TooltipProps } from 'recharts'
+import type { TooltipContentProps } from 'recharts'
 
-type ChartTooltipProps = TooltipProps<number, string>
-
-export function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
+export function ChartTooltip({ active, payload, label }: TooltipContentProps) {
   if (!active || !payload?.length) return null
 
   return (

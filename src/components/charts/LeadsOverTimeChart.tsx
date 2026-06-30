@@ -39,7 +39,7 @@ export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
         <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
         <XAxis dataKey="date" tick={{ fontSize: 11, fill: chart.tick }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: chart.tick }} axisLine={false} tickLine={false} />
-        <Tooltip content={<ChartTooltip />} />
+        <Tooltip content={ChartTooltip} />
         {esteira === 'both' && (
           <Legend
             wrapperStyle={{ fontSize: '12px', paddingTop: '12px', color: chart.isDark ? '#f1f5f9' : '#0f172a' }}

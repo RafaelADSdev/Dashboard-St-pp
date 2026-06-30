@@ -56,7 +56,7 @@ export function LeadsByTeamPanel({ byDiretoria }: Props) {
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: chart.cursor }} />
+        <Tooltip content={ChartTooltip} cursor={{ fill: chart.cursor }} />
         <Bar dataKey="leads" name="Leads" fill="#1e3a8a" radius={[0, 6, 6, 0]} maxBarSize={32} />
       </BarChart>
     </ResponsiveContainer>

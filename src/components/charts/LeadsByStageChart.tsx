@@ -35,7 +35,7 @@ export function LeadsByStageChart({ data }: Props) {
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip content={<ChartTooltip />} cursor={{ fill: chart.cursor }} />
+        <Tooltip content={ChartTooltip} cursor={{ fill: chart.cursor }} />
         <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
           {data.map((_, i) => (
             <Cell key={i} fill={STAGE_COLORS[i % STAGE_COLORS.length]} />
