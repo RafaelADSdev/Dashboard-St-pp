@@ -30,6 +30,8 @@ Painel operacional para acompanhar negociações do **Bitrix24** da Superintend�
 
 O dashboard conecta-se ao CRM Bitrix24 e apresenta KPIs, funis, evolução temporal e distribuição de leads a partir de **negociações (deals)**. Os dados são segmentados por responsável (`ASSIGNED_BY_ID`), mapeado automaticamente a partir da estrutura de departamentos da Stüpp.
 
+A integração com o Bitrix é feita por **webhook de entrada** configurado no servidor — o token nunca vai para o navegador. A **tela de login** existe para controlar quem pode acessar o painel; ela não substitui nem expõe o login do Bitrix24.
+
 ### Esteiras comerciais
 
 | Esteira | Category ID (Bitrix) | Rota |
@@ -99,6 +101,7 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 ### Interface
 
 - **Modo claro e escuro** — toggle no header (ícone sol/lua); preferência salva no navegador e respeita o tema do sistema na primeira visita
+- **Tela de login** — acesso restrito ao painel (autenticação separada do Bitrix24)
 - Sidebar com marcas **Stüpp | HubON** (logos adaptadas ao tema; versões brancas no modo escuro)
 - Tela de login permanece sempre escura; usa logos brancas nativas (Stüpp + HubON)
 - Paleta azul institucional, tipografia Plus Jakarta Sans; gráficos e cards adaptados ao tema ativo
@@ -115,7 +118,7 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 | Estado | [Zustand](https://zustand.docs.pmnd.rs/) (filtros + layout UI) |
 | Dados | [TanStack Query v5](https://tanstack.com/query) |
 | Kanban (DnD) | [@dnd-kit](https://dndkit.com/) |
-| Auth | [Supabase Auth](https://supabase.com/docs/guides/auth) + [@supabase/ssr](https://supabase.com/docs/guides/auth/server-side/nextjs) |
+| Auth | [Supabase Auth](https://supabase.com/docs/guides/auth) — protege o acesso ao dashboard |
 | Gráficos | [Recharts](https://recharts.org/) + [ApexCharts](https://apexcharts.com/) |
 | Exportação | [jsPDF](https://github.com/parallax/jsPDF) + [jspdf-autotable](https://github.com/simonbengtsson/jsPDF-AutoTable), [xlsx-js-style](https://www.npmjs.com/package/xlsx-js-style) |
 | Datas | [date-fns](https://date-fns.org/) |
@@ -129,12 +132,14 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 ```mermaid
 flowchart LR
     subgraph Browser
+        LOGIN[Tela de login]
         UI[Dashboard UI]
         RQ[TanStack Query]
         EXP[Export PDF / Excel]
     end
 
     subgraph Vercel
+        AUTH[Supabase Auth]
         API_DASH["/api/dashboard"]
         API_DEALS["/api/deals/*"]
         API_ORG["/api/org"]
@@ -148,6 +153,8 @@ flowchart LR
         SPA[Roletas SPA · entity 129]
     end
 
+    LOGIN --> AUTH
+    AUTH --> UI
     UI --> RQ
     EXP --> RQ
     RQ --> API_DASH
@@ -164,11 +171,12 @@ flowchart LR
 
 ### Fluxo de dados
 
-1. O cliente chama `/api/dashboard` com os filtros aplicados.
-2. O servidor carrega do cache: estrutura org, catálogo de fases, labels de fonte e roletas Stüpp.
-3. Negociações, contagens por esteira e breakdowns (diretoria/equipe) são buscados em paralelo no Bitrix.
-4. Quando o volume ultrapassa 500 registros por consulta, a API aplica **split automático** por esteira e por intervalo de datas.
-5. Os dados são agregados no servidor (`aggregateLeadsData`) e retornados como JSON pronto para os gráficos e exportações.
+1. O usuário autentica na **tela de login** (acesso ao painel, não ao Bitrix).
+2. O cliente chama `/api/dashboard` com os filtros aplicados.
+3. O servidor carrega do cache: estrutura org, catálogo de fases, labels de fonte e roletas Stüpp.
+4. Negociações, contagens por esteira e breakdowns (diretoria/equipe) são buscados em paralelo no Bitrix via webhook.
+5. Quando o volume ultrapassa 500 registros por consulta, a API aplica **split automático** por esteira e por intervalo de datas.
+6. Os dados são agregados no servidor (`aggregateLeadsData`) e retornados como JSON pronto para os gráficos e exportações.
 
 ---
 
@@ -260,19 +268,17 @@ BITRIX_WEBHOOK_URL=https://seu-portal.bitrix24.com.br/rest/USER_ID/TOKEN/
 NEXT_PUBLIC_BITRIX_ESTEIRA_GERAL_ID=16
 NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID=64
 
-# Supabase Auth (obrigatório em produção)
-# Projeto: https://supabase.com/dashboard/project/vhtztzilrrlbflicmeft
-NEXT_PUBLIC_SUPABASE_URL=https://vhtztzilrrlbflicmeft.supabase.co
+# Supabase Auth — protege o acesso ao dashboard (obrigatório em produção)
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon
 
 # Opcional — apenas para npm run seed:admin (nunca expor no frontend)
 SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
 ```
 
-> Crie usuários com `npm run seed:admin` (requer `SUPABASE_SERVICE_ROLE_KEY`) ou manualmente no painel Supabase.  
-> Aplique a migration em `supabase/migrations/` no projeto Supabase antes do primeiro login.  
-> Login por **nome de usuário** — o sistema converte internamente para `usuario@stupp.dashboard`.  
-> Admin inicial: usuário `admin` / senha `admin123`.
+> **Autenticação:** o login controla quem acessa o painel. A conexão com o Bitrix é direta via webhook no servidor — usuários do dashboard **não** precisam de credenciais Bitrix.  
+> Crie usuários autorizados no Supabase (painel ou `npm run seed:admin`) e aplique as migrations em `supabase/migrations/` antes do primeiro acesso.  
+> O login usa **nome de usuário**; o sistema converte internamente para e-mail no domínio configurado.
 
 > **Compatibilidade:** o projeto também aceita `VITE_BITRIX_WEBHOOK_URL` e `VITE_BITRIX_ESTEIRA_*` para ambientes legados.
 
@@ -483,12 +489,12 @@ Layout idêntico nas duas esteiras: KPI → Kanban → Funil + Evolução → Or
 
 ## Segurança
 
-- **Login via Supabase Auth** — usuários individuais com e-mail e senha
+- **Acesso ao painel** — tela de login com Supabase Auth; rotas e APIs protegidas por middleware
+- **Acesso ao Bitrix** — webhook de entrada **somente no servidor**; token nunca exposto ao navegador
 - Sessão em cookies gerenciada pelo `@supabase/ssr` (renovação automática no middleware)
-- Rotas `/api/*` e páginas do dashboard protegidas por middleware (`getClaims`)
-- O webhook do Bitrix fica **apenas no servidor** (`BITRIX_WEBHOOK_URL`)
-- Arquivos `.env` estão no `.gitignore` — nunca commite credenciais
-- O proxy `/api/bitrix` evita exposição do token no bundle do cliente
+- Rotas `/api/*` e páginas do dashboard exigem autenticação
+- Arquivos `.env` estão no `.gitignore` — nunca commite credenciais, URLs de webhook ou chaves Supabase
+- O proxy `/api/bitrix` concentra as chamadas ao CRM sem expor o token no bundle do cliente
 - **Nunca** exponha a `service_role` key do Supabase no frontend
 
 ---
