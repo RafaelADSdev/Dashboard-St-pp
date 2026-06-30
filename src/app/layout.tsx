@@ -13,6 +13,10 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'Dashboard Stüpp',
   description: 'Dashboard operacional da Superintendência Stüpp',
+  icons: {
+    icon: [{ url: '/favicon.png', type: 'image/png' }],
+    apple: [{ url: '/icon-192.png', type: 'image/png' }],
+  },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

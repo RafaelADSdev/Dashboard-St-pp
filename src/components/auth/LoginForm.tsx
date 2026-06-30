@@ -116,11 +116,11 @@ export function LoginForm() {
             />
             <div className="h-10 w-px bg-white/15" />
             <Image
-              src="/hubon-logo-white.jpeg"
+              src="/hubon-logo.png"
               alt="HubON"
               width={110}
-              height={36}
-              className="h-8 w-auto opacity-90 sm:h-9"
+              height={41}
+              className="h-8 w-auto max-h-8 brightness-0 invert opacity-90 sm:h-9 sm:max-h-9"
             />
           </div>
           <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.28em] text-brand-400">

@@ -38,7 +38,7 @@ export function Sidebar() {
             <Link href="/" className="flex min-w-0 shrink items-center gap-3" title="Superintendência Stüpp">
               <StuppLogo priority className="h-8 w-auto shrink-0" />
               <div className="h-8 w-px shrink-0 bg-slate-200 dark:bg-white/15" aria-hidden />
-              <HubOnLogo priority className="h-7 w-auto shrink-0" />
+              <HubOnLogo priority className="h-8 w-auto max-h-8 shrink-0 opacity-90" />
             </Link>
             <button
               type="button"
