@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, LayoutDashboard, PanelLeftClose, PanelLeftOpen, TrendingUp } from 'lucide-react'
+import { Building2, CircleDot, LayoutDashboard, PanelLeftClose, PanelLeftOpen, TrendingUp } from 'lucide-react'
 import clsx from 'clsx'
 import { StuppLogo } from '@/components/brand/StuppLogo'
 import { HubOnLogo } from '@/components/brand/HubOnLogo'
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/', label: 'Visão geral', icon: LayoutDashboard },
   { to: '/esteira-economico', label: 'Comercial Econômico', icon: TrendingUp },
   { to: '/esteira-geral', label: 'Comercial Geral', icon: Building2 },
+  { to: '/roletas', label: 'Roletas', icon: CircleDot },
 ]
 
 export function Sidebar() {

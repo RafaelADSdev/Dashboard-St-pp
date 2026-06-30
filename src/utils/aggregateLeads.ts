@@ -10,43 +10,41 @@ import {
   groupByStageBreakdown,
   groupByStageOrdered,
 } from '@/api/bitrixStages'
-import type { BitrixLead, DiretoriaSummary, FilterParams, LeadsDashboardData, StuppTeamOption, TeamDetail } from '@/api/types'
+import type {
+  BitrixLead,
+  DiretoriaSummary,
+  FilterParams,
+  LeadsDashboardData,
+  StuppTeamOption,
+  TeamDetail,
+} from '@/api/types'
 import type { StuppOrgStructure } from '@/api/bitrixDepartments'
 import { getTeamLabel } from '@/api/bitrixDepartments'
 import { buildKanbanBoards } from '@/utils/buildKanbanBoards'
 import { buildLeadExportDetails } from '@/utils/buildLeadExportDetails'
 
-interface EsteiraCounts {
-  total: number
-  geral: number
-  economico: number
-}
-
-interface BreakdownCounts {
-  byDiretoria: DiretoriaSummary[]
-  byTeam: { equipe: string; leads: number }[]
-}
-
 export function aggregateLeadsData(
   bitrixLeads: BitrixLead[],
   filters: FilterParams,
   stageCatalog: StageCatalog,
-  counts: EsteiraCounts,
   org: StuppOrgStructure,
   equipeOptions: StuppTeamOption[],
-  breakdownCounts?: BreakdownCounts,
   sourceLabels: Record<string, string> = {}
 ): LeadsDashboardData {
   const { labels, geral: geralStages, economico: economicoStages } = stageCatalog
 
   const allowedUserIds = new Set(
-    filters.equipe
-      ? (org.diretorias.flatMap((d) => d.teams).find((t) => t.id === filters.equipe)?.userIds ?? [])
-      : filters.diretoria
-        ? (org.diretorias
-            .find((d) => d.id === filters.diretoria || d.name === filters.diretoria)
-            ?.teams.flatMap((t) => t.userIds) ?? org.allUserIds)
-        : org.allUserIds
+    filters.corretor
+      ? org.allUserIds.includes(filters.corretor)
+        ? [filters.corretor]
+        : []
+      : filters.equipe
+        ? (org.diretorias.flatMap((d) => d.teams).find((t) => t.id === filters.equipe)?.userIds ?? [])
+        : filters.diretoria
+          ? (org.diretorias
+              .find((d) => d.id === filters.diretoria || d.name === filters.diretoria)
+              ?.teams.flatMap((t) => t.userIds) ?? org.allUserIds)
+          : org.allUserIds
   )
 
   const filtered = bitrixLeads.filter((lead) => allowedUserIds.has(lead.assigned_by_id))
@@ -69,9 +67,16 @@ export function aggregateLeadsData(
   const funnelEconomico = filtered.filter((l) => isEconomicoCategory(l.category_id))
   const funnelGeral = filtered.filter((l) => isGeralCategory(l.category_id))
 
-  const equipes = equipeOptions
+  const geralCount = funnelGeral.length
+  const economicoCount = funnelEconomico.length
+  const totalLeads =
+    filters.esteira === 'GERAL'
+      ? geralCount
+      : filters.esteira === 'ECONOMICO'
+        ? economicoCount
+        : geralCount + economicoCount
 
-  const byDiretoriaFromLeads = org.diretorias.map((diretoria) => {
+  const byDiretoriaFromLeads: DiretoriaSummary[] = org.diretorias.map((diretoria) => {
     const userIds = new Set(diretoria.teams.flatMap((t) => t.userIds))
     const leads = filtered.filter((l) => userIds.has(l.assigned_by_id)).length
     return { id: diretoria.id, name: diretoria.name, leads }
@@ -100,11 +105,11 @@ export function aggregateLeadsData(
   )
 
   return {
-    totalLeads: counts.total,
-    economicoCount: counts.economico,
-    geralCount: counts.geral,
-    byTeam: breakdownCounts?.byTeam ?? byTeamFromLeads,
-    byDiretoria: breakdownCounts?.byDiretoria ?? byDiretoriaFromLeads,
+    totalLeads,
+    economicoCount,
+    geralCount,
+    byTeam: byTeamFromLeads,
+    byDiretoria: byDiretoriaFromLeads,
     teamDetails,
     byStage: buildByStageForFilter(filtered, filters.esteira, stageCatalog),
     bySource: groupBySource(filtered, sourceLabels),
@@ -124,7 +129,7 @@ export function aggregateLeadsData(
     overTime: groupByDate(filtered),
     leadDetails: buildLeadExportDetails(filtered, stageCatalog, sourceLabels),
     diretorias: org.diretorias.map((d) => d.name),
-    equipes,
+    equipes: equipeOptions,
   }
 }
 
@@ -197,11 +202,21 @@ function groupBySource(
     .sort((a, b) => b.count - a.count)
 }
 
+function parseEntryDate(value: string): Date | null {
+  const normalized = String(value ?? '').trim()
+  if (!normalized) return null
+  const parsed = parseISO(normalized.includes('T') ? normalized : `${normalized.replace(' ', 'T')}`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
 function groupByDate(leads: BitrixLead[]) {
   const dates: Record<string, { economico: number; geral: number }> = {}
 
   for (const lead of leads) {
-    const dateKey = format(parseISO(lead.date_create), 'dd/MM')
+    const entryDate = lead.date_arrived || lead.date_create
+    const parsed = parseEntryDate(entryDate)
+    if (!parsed) continue
+    const dateKey = format(parsed, 'dd/MM')
     if (!dates[dateKey]) {
       dates[dateKey] = { economico: 0, geral: 0 }
     }

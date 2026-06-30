@@ -15,9 +15,8 @@ export function buildLeadExportDetails(
 ): ExportLeadDetail[] {
   return leads
     .map((lead) => {
-      const tempoNaEsteira = computeDuration(lead.date_create, reference)
-      const lastActivity = lead.date_last_movement || lead.date_modify || lead.date_create
-      const tempoSemAtualizar = computeDuration(lastActivity, reference)
+      const entryDate = lead.date_arrived || lead.date_create
+      const tempoNaEsteira = computeDuration(entryDate, reference)
 
       return {
         id: lead.id,
@@ -33,19 +32,18 @@ export function buildLeadExportDetails(
         origem: lead.source_id
           ? (sourceLabels[lead.source_id] ?? lead.source_id)
           : 'Sem origem',
-        dateCreateIso: lead.date_create,
-        dateModifyIso: lastActivity,
-        dateCreate: formatBitrixDateDisplay(lead.date_create),
+        dateCreateIso: entryDate,
+        dateModifyIso: entryDate,
+        dateCreate: formatBitrixDateDisplay(entryDate),
         daysInPipeline: tempoNaEsteira.days,
         tempoNaEsteira: tempoNaEsteira.label,
-        dateModify: formatBitrixDateDisplay(lead.date_modify),
-        daysWithoutUpdate: tempoSemAtualizar.days,
-        tempoSemAtualizar: tempoSemAtualizar.label,
+        dateModify: formatBitrixDateDisplay(entryDate),
+        daysWithoutUpdate: tempoNaEsteira.days,
+        tempoSemAtualizar: tempoNaEsteira.label,
       }
     })
     .sort(
       (a, b) =>
-        b.daysWithoutUpdate - a.daysWithoutUpdate ||
         b.daysInPipeline - a.daysInPipeline ||
         a.title.localeCompare(b.title, 'pt-BR')
     )

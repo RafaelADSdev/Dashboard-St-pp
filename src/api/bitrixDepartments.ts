@@ -44,42 +44,15 @@ export interface StuppOrgStructure {
   userToName: Record<string, string>
 }
 
+import { bitrixPost } from '@/api/bitrixRequest'
+import type { BitrixWebhookRef } from '@/api/bitrix'
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function bitrixPost<T>(
-  webhookUrl: string,
-  method: string,
-  body: Record<string, unknown>,
-  retries = 3
-): Promise<T> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const res = await fetch(`${webhookUrl}${method}.json`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    const data = await res.json()
-
-    if (data.error || res.status === 429) {
-      const msg = String(data.error_description ?? data.error ?? res.statusText)
-      if ((msg.includes('operation time limit') || res.status === 429) && attempt < retries) {
-        await sleep((attempt + 1) * 4000)
-        continue
-      }
-      throw new Error(`Bitrix API error: ${msg}`)
-    }
-
-    return data
-  }
-
-  throw new Error('Bitrix API error: limite de requisições excedido')
-}
-
 async function fetchAllPages<T>(
-  webhookUrl: string,
+  webhookUrl: BitrixWebhookRef,
   method: string,
   body: Record<string, unknown> = {}
 ): Promise<T[]> {
@@ -248,7 +221,7 @@ function buildUserMaps(
 }
 
 async function fetchUserNames(
-  webhookUrl: string,
+  webhookUrl: BitrixWebhookRef,
   userIds: string[]
 ): Promise<Record<string, string>> {
   if (userIds.length === 0) return {}
@@ -378,7 +351,7 @@ export function buildStuppOrgStructure(
 }
 
 export async function fetchStuppOrgStructure(
-  webhookUrl = getBitrixWebhookUrl()
+  webhookUrl: BitrixWebhookRef = getBitrixWebhookUrl()
 ): Promise<StuppOrgStructure> {
   const [departments, users] = await Promise.all([
     fetchAllPages<BitrixDepartment>(webhookUrl, 'department.get'),

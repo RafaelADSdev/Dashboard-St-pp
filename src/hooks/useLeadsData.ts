@@ -2,6 +2,20 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { FilterParams, LeadsDashboardData } from '@/api/types'
 import { DASHBOARD_SYNC_MS } from '@/lib/syncConfig'
 
+const CLIENT_FETCH_TIMEOUT_MS = 5 * 60_000
+
+async function parseApiError(res: Response, fallback: string): Promise<string> {
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    if (res.status === 401 || res.redirected) {
+      return 'Sessão expirada. Faça login novamente.'
+    }
+    return `${fallback} (HTTP ${res.status})`
+  }
+  const body = (await res.json().catch(() => ({}))) as { error?: string }
+  return body.error ?? fallback
+}
+
 async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData> {
   const params = new URLSearchParams({
     dateFrom: filters.dateFrom,
@@ -10,16 +24,32 @@ async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData
     diretoria: filters.diretoria,
     equipe: filters.equipe,
     roleta: filters.roleta,
+    corretor: filters.corretor,
   })
 
-  const res = await fetch(`/api/dashboard?${params.toString()}`)
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), CLIENT_FETCH_TIMEOUT_MS)
 
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new Error(body.error ?? 'Erro ao carregar dados do dashboard')
+  try {
+    const res = await fetch(`/api/dashboard?${params.toString()}`, {
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      throw new Error(await parseApiError(res, 'Erro ao carregar dados do dashboard'))
+    }
+
+    return res.json()
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(
+        'A consulta ao Bitrix demorou demais. Tente um período menor ou configure webhooks separados.'
+      )
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeout)
   }
-
-  return res.json()
 }
 
 export function useLeadsData(
@@ -34,8 +64,8 @@ export function useLeadsData(
     queryFn: () => fetchDashboard(merged!),
     placeholderData: keepPreviousData,
     staleTime: DASHBOARD_SYNC_MS,
-    refetchInterval: DASHBOARD_SYNC_MS,
-    retry: 2,
-    retryDelay: 5000,
+    refetchInterval: (query) =>
+      query.state.status === 'success' ? DASHBOARD_SYNC_MS : false,
+    retry: 0,
   })
 }

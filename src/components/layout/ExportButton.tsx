@@ -59,7 +59,8 @@ export function ExportButton() {
     }
 
     const org = queryClient.getQueryData<OrgPreview>(['stupp-org'])
-    const roletas = queryClient.getQueryData<StuppRoletaOption[]>(['stupp-roletas'])
+    const catalog = queryClient.getQueryData<{ roletas: StuppRoletaOption[] }>(['stupp-roletas'])
+    const roletas = catalog?.roletas
 
     setExporting(format)
     setOpen(false)

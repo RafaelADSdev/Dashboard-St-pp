@@ -39,7 +39,7 @@ const defaultIcons: Record<string, LucideIcon> = {
 
 interface Props {
   label: string
-  value: number
+  value?: number
   color?: keyof typeof variants
   icon?: LucideIcon
 }
@@ -47,6 +47,7 @@ interface Props {
 export function KPICard({ label, value, color = 'default', icon }: Props) {
   const v = variants[color]
   const Icon = icon ?? defaultIcons[color]
+  const displayValue = value === undefined ? '…' : formatNumber(value)
 
   return (
     <div
@@ -63,7 +64,7 @@ export function KPICard({ label, value, color = 'default', icon }: Props) {
             {label}
           </p>
           <p className={clsx('text-3xl font-bold mt-2 tabular-nums tracking-tight', v.value)}>
-            {formatNumber(value)}
+            {displayValue}
           </p>
         </div>
         <div className={clsx('flex items-center justify-center w-10 h-10 rounded-xl', v.icon)}>

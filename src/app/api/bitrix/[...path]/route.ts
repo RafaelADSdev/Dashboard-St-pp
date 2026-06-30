@@ -1,4 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  BITRIX_PAUSED_MESSAGE,
+  bitrixRouteErrorStatus,
+  isBitrixPaused,
+} from '@/lib/server/bitrixPaused'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,6 +24,13 @@ function buildTargetUrl(webhookUrl: string, path: string[], search: string) {
 }
 
 async function proxyBitrix(request: NextRequest, context: RouteContext) {
+  if (isBitrixPaused()) {
+    return NextResponse.json(
+      { error: BITRIX_PAUSED_MESSAGE },
+      { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
+    )
+  }
+
   const webhookUrl = getWebhookUrl()
 
   if (!webhookUrl) {

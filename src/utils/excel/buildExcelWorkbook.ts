@@ -369,7 +369,7 @@ function buildLeadDetailsSheet(ctx: ExportContext): XLSX.WorkSheet | null {
   if (leads.length === 0) return null
 
   const sheet: XLSX.WorkSheet = {}
-  const lastCol = 'M'
+  const lastCol = 'K'
   const headers = [
     'ID',
     'Negociação',
@@ -382,8 +382,6 @@ function buildLeadDetailsSheet(ctx: ExportContext): XLSX.WorkSheet | null {
     'Origem',
     'Data entrada',
     'Tempo na esteira',
-    'Última atualização',
-    'Tempo sem atualizar',
   ]
 
   setCell(sheet, 0, 0, 'Detalhamento de leads', titleStyle)
@@ -392,7 +390,7 @@ function buildLeadDetailsSheet(ctx: ExportContext): XLSX.WorkSheet | null {
     sheet,
     1,
     0,
-    'Tempo na esteira = desde a criação · Sem atualizar = dias parado com o corretor (última modificação no CRM)',
+    'Tempo na esteira = desde a data de entrada no corretor',
     metaStyle
   )
   merge(sheet, 'A2', `${lastCol}2`)
@@ -418,8 +416,6 @@ function buildLeadDetailsSheet(ctx: ExportContext): XLSX.WorkSheet | null {
       lead.origem,
       lead.dateCreate,
       lead.tempoNaEsteira,
-      lead.dateModify,
-      lead.tempoSemAtualizar,
     ]
     values.forEach((value, col) => {
       const align = col === 0 ? 'center' : 'left'
@@ -430,12 +426,12 @@ function buildLeadDetailsSheet(ctx: ExportContext): XLSX.WorkSheet | null {
   const totalRow = headerRow + 1 + leads.length
   setCell(sheet, totalRow, 0, 'TOTAL', totalLabelStyle)
   setCell(sheet, totalRow, 1, `${leads.length} lead(s)`, totalStyle)
-  for (let col = 2; col <= 12; col++) {
+  for (let col = 2; col <= 10; col++) {
     setCell(sheet, totalRow, col, '', totalStyle)
   }
 
   sheet['!ref'] = `A1:${lastCol}${totalRow + 1}`
-  setCols(sheet, [8, 32, 16, 18, 20, 16, 16, 14, 16, 18, 16, 18, 18])
+  setCols(sheet, [8, 32, 16, 18, 20, 16, 16, 14, 16, 18, 16])
   sheet['!autofilter'] = { ref: `A${headerRow + 1}:${lastCol}${totalRow - 1}` }
   sheet['!views'] = [{ state: 'frozen', ySplit: headerRow + 1, activeCell: 'B6' }]
 

@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server'
 import { updateDealAssignee } from '@/api/bitrix'
-import { getServerBitrixWebhookUrl } from '@/lib/server/bitrixWebhook'
+import { getDealsBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
+import { bitrixRouteErrorStatus, isBitrixPaused, BITRIX_PAUSED_MESSAGE } from '@/lib/server/bitrixPaused'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
+  if (isBitrixPaused()) {
+    return NextResponse.json(
+      { error: BITRIX_PAUSED_MESSAGE },
+      { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
+    )
+  }
+
   try {
     const body = (await request.json()) as { dealId?: string; assignedById?: string }
 
@@ -16,7 +24,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const webhookUrl = getServerBitrixWebhookUrl()
+    const webhookUrl = getDealsBitrixWebhookCandidates()
     if (!webhookUrl) {
       return NextResponse.json(
         { error: 'Configure BITRIX_WEBHOOK_URL no .env' },
@@ -28,6 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao transferir negociação'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: bitrixRouteErrorStatus(message) })
   }
 }

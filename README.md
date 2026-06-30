@@ -1,16 +1,40 @@
 # Dashboard Superintendência Stüpp
 
-Painel operacional para acompanhar negociações do **Bitrix24** da Superintendência Stüpp — com visão consolidada, filtros por diretoria/equipe/roleta, análise por esteira comercial e exportação de relatórios.
+Painel operacional para acompanhar negociações, esteiras comerciais e **roletas de distribuição** do **Bitrix24** da Superintendência Stüpp — com KPIs, funis, kanban, filtros organizacionais e exportação de relatórios.
 
-**Produção:** [dashboard-st-pp.vercel.app](https://dashboard-st-pp.vercel.app)  
-**Repositório:** [github.com/RafaelADSdev/Dashboard-St-pp](https://github.com/RafaelADSdev/Dashboard-St-pp)
+| | |
+|---|---|
+| **Produção** | [dashboard-st-pp.vercel.app](https://dashboard-st-pp.vercel.app) |
+| **Repositório** | [github.com/RafaelADSdev/Dashboard-St-pp](https://github.com/RafaelADSdev/Dashboard-St-pp) |
+| **Stack** | Next.js 16 · React 19 · Tailwind v4 · Supabase Auth · Bitrix24 REST |
+
+---
+
+## Início rápido
+
+```bash
+git clone https://github.com/RafaelADSdev/Dashboard-St-pp.git
+cd Dashboard-St-pp
+npm install
+cp .env.example .env.local   # preencha o webhook Bitrix e o Supabase
+npm run dev
+```
+
+Acesse [http://localhost:3000](http://localhost:3000). Para criar o primeiro usuário admin:
+
+```bash
+npm run seed:admin
+```
+
+Credenciais padrão do seed: usuário `admin` / senha `admin123` (altere após o primeiro acesso).
 
 ---
 
 ## Sumário
 
-- [Visão geral](#visão-geral)
+- [Páginas do painel](#páginas-do-painel)
 - [Funcionalidades](#funcionalidades)
+- [Integração Bitrix24](#integração-bitrix24)
 - [Stack tecnológica](#stack-tecnológica)
 - [Arquitetura](#arquitetura)
 - [Estrutura do projeto](#estrutura-do-projeto)
@@ -18,44 +42,25 @@ Painel operacional para acompanhar negociações do **Bitrix24** da Superintend�
 - [Deploy na Vercel](#deploy-na-vercel)
 - [API interna](#api-interna)
 - [Filtros](#filtros)
-- [Exportação de relatórios](#exportação-de-relatórios)
+- [Exportação](#exportação-de-relatórios)
 - [Kanban operacional](#kanban-operacional)
 - [Performance e confiabilidade](#performance-e-confiabilidade)
 - [Segurança](#segurança)
-- [Scripts disponíveis](#scripts-disponíveis)
+- [Solução de problemas](#solução-de-problemas)
+- [Scripts](#scripts-disponíveis)
 
 ---
 
-## Visão geral
+## Páginas do painel
 
-O dashboard conecta-se ao CRM Bitrix24 e apresenta KPIs, funis, evolução temporal e distribuição de leads a partir de **negociações (deals)**. Os dados são segmentados por responsável (`ASSIGNED_BY_ID`), mapeado automaticamente a partir da estrutura de departamentos da Stüpp.
+| Rota | Descrição |
+|------|-----------|
+| `/` | Visão geral — KPIs das duas esteiras, funis, evolução, leads por diretoria/fonte |
+| `/esteira-geral` | Comercial Geral (category `16`) + kanban operacional |
+| `/esteira-economico` | Comercial Econômico (category `64`) + kanban operacional |
+| `/roletas` | Catálogo de roletas Stüpp, KPIs por status e gestão de corretores |
 
-A integração com o Bitrix é feita por **webhook de entrada** configurado no servidor — o token nunca vai para o navegador. A **tela de login** existe para controlar quem pode acessar o painel; ela não substitui nem expõe o login do Bitrix24.
-
-### Esteiras comerciais
-
-| Esteira | Category ID (Bitrix) | Rota |
-|---------|----------------------|------|
-| Comercial Geral | `16` | `/esteira-geral` |
-| Comercial Econômico | `64` | `/esteira-economico` |
-| Visão consolidada | Ambas | `/` |
-
-### Estrutura organizacional
-
-```
-SUPERINTENDÊNCIA STÜPP (ID 3)
-└── COMERCIAL-S (ID 60)
-    ├── SANTOS
-    ├── MONTEIRO
-    ├── GEORGII
-    ├── TALMON
-    ├── STÜPP
-    ├── HENRIQUE
-    └── SEVERO
-        └── Equipes e sub-equipes (Líderes / LT)
-```
-
-Cada diretoria agrupa equipes com seus respectivos usuários ativos. Filtros de diretoria, equipe e roleta reduzem o volume de dados consultados diretamente na API do Bitrix.
+Todas as rotas exigem login (Supabase Auth). O acesso ao Bitrix é feito pelo servidor via webhook — o usuário do dashboard **não** precisa de credenciais Bitrix.
 
 ---
 
@@ -63,49 +68,108 @@ Cada diretoria agrupa equipes com seus respectivos usuários ativos. Filtros de 
 
 ### Dashboard e análises
 
-- **Visão geral comercial** — KPIs das duas esteiras, funis, evolução temporal, leads por equipe/diretoria e **leads por fonte** (`SOURCE_ID` do Bitrix)
-- **Páginas por esteira** — visão focada em Comercial Geral ou Comercial Econômico, com **Kanban operacional** (ver [Kanban operacional](#kanban-operacional))
-- **Leads por diretoria** — gráfico de barras horizontais por diretoria
-- **Funis comerciais** — etapas do pipeline com destaque apenas para fases com volume
-- **Gráficos interativos** — tooltips brancos no hover (legíveis no modo escuro), layout limpo
+- KPIs consolidados das esteiras Comercial Geral e Comercial Econômico
+- Funis comerciais, evolução temporal e distribuição por diretoria, equipe e fonte (`SOURCE_ID`)
+- Gráficos interativos com suporte a modo claro/escuro
+- Atualização automática dos dados a cada **10 segundos**
 
 ### Kanban operacional (esteiras)
 
 Disponível em `/esteira-geral` e `/esteira-economico`:
 
-- **Kanban por fase** — colunas alinhadas ao funil do Bitrix, com cores das etapas
-- **Arrastar e soltar** — mover negociação de fase direto no CRM (`crm.deal.update`)
-- **Detalhes do lead** — modal com responsável, diretoria, roleta, origem e datas de chegada/movimentação (campos variam por esteira; ver [Kanban operacional](#kanban-operacional))
-- **Transferência individual** — reatribuir corretor pelo modal
-- **Transferência em lote** — selecionar vários cards e enviar para um corretor de uma vez
-- Cards exibem responsável, diretoria, roleta, origem e **datas de chegada e última movimentação** (formato diferente por esteira)
+- Colunas alinhadas às fases do funil Bitrix
+- Arrastar e soltar para mudar fase (`crm.deal.update`)
+- Modal com detalhes do lead, transferência individual e em lote
+- Datas de chegada e última movimentação por esteira (campos Bitrix específicos)
 
-### Filtros
+### Roletas (`/roletas`)
 
-- **Período** — intervalo de datas customizável (padrão: últimos 7 dias)
-- **Esteira** — Todas, Comercial Geral ou Comercial Econômico
-- **Diretoria e equipe** — recorte pela estrutura org da Stüpp
-- **Roleta** — filtro por roletas Stüpp cadastradas no SPA Bitrix (entity type `129`), excluindo roletas inativas/descartadas
-- Modo **rascunho → Aplicar filtros**, com feedback visual durante o carregamento
-- **Limpar filtros** — botão no rodapé do painel de filtros (drawer lateral)
-- Painel de filtros em **drawer lateral**; sidebar recolhível
+Gestão e visão do catálogo de roletas Stüpp (SPA Bitrix, entity **129**):
+
+- KPIs: roletas ativas, novas, suspensas e leads no período
+- Filtros do catálogo com modo **rascunho → Aplicar filtros**:
+  - Busca por corretor Stüpp
+  - Diretoria e liderança (via corretores cadastrados na roleta)
+  - Nome da roleta e status (ativa / nova / suspensa)
+- Lista expandível por roleta com:
+  - Alteração de status no kanban Bitrix
+  - Corretores agrupados por liderança
+  - Adicionar e remover corretores (entity **186** — aba “Corretores da roleta”)
+
+### Filtros gerais (drawer lateral)
+
+Presentes em todas as páginas principais:
+
+| Filtro | Comportamento |
+|--------|---------------|
+| Período | Intervalo customizável (padrão: últimos 7 dias) |
+| Esteira | Todas, Comercial Geral ou Comercial Econômico |
+| Diretoria / Equipe / Corretor | Recorte pela estrutura org da Stüpp |
+| Roleta | **Somente roletas ativas** (status `ativa` no kanban) |
+
+Fluxo: ajuste os campos → **Aplicar filtros** → dados recarregam com feedback visual. Use **Limpar filtros** para voltar ao padrão.
 
 ### Exportação
 
-- Botão **Exportar** no header — PDF ou Excel com os filtros e dados atualmente aplicados
-- **Excel estruturado** — aba Resumo, **Detalhamento** (lead a lead), Evolução e abas por seção com ranking, percentual e linha de total; identidade visual HubON
-- **PDF tabular** — relatório completo por seções; linhas com valor `0` são omitidas
-- **Detalhamento de leads** — tempo na esteira (desde a criação) e tempo sem atualizar com o corretor (desde a última modificação no CRM)
-- Exportações respeitam a página atual (visão geral ou esteira específica)
+Botão **Exportar** no header — PDF ou Excel com os filtros aplicados na página atual:
+
+- Excel estruturado (Resumo, Detalhamento lead a lead, Evolução, abas por seção)
+- PDF tabular por seções
+- Leads ordenados pelos mais parados primeiro
+- Identidade visual HubON
 
 ### Interface
 
-- **Modo claro e escuro** — toggle no header (ícone sol/lua); preferência salva no navegador e respeita o tema do sistema na primeira visita
-- **Tela de login** — acesso restrito ao painel (autenticação separada do Bitrix24)
-- Sidebar com marcas **Stüpp | HubON** (logos adaptadas ao tema; versões brancas no modo escuro)
-- Tela de login permanece sempre escura; usa logos brancas nativas (Stüpp + HubON)
-- Paleta azul institucional, tipografia Plus Jakarta Sans; gráficos e cards adaptados ao tema ativo
-- Atualização automática dos dados a cada **10 segundos**
+- Modo claro/escuro (preferência salva no navegador)
+- Sidebar recolhível com marcas Stüpp | HubON
+- Painel de filtros em drawer lateral
+- Tipografia Plus Jakarta Sans, paleta azul institucional
+
+---
+
+## Integração Bitrix24
+
+### Esteiras comerciais (deals)
+
+| Esteira | Category ID | Variável de ambiente |
+|---------|-------------|----------------------|
+| Comercial Geral | `16` | `NEXT_PUBLIC_BITRIX_ESTEIRA_GERAL_ID` |
+| Comercial Econômico | `64` | `NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID` |
+
+### Roletas (SPA)
+
+| Recurso | Entity / ID | Detalhe |
+|---------|-------------|---------|
+| Roletas | Entity **129**, category **20** | Kanban: Nova → Ativa → Suspensa |
+| Corretores da roleta | Entity **186** | Vinculados pelo nome da roleta (`ufCrm11_1738081783`) |
+| Campo roleta no deal | `UF_CRM_1734703374` | Usado nos filtros e cards do kanban |
+
+Status operacionais: `ativa`, `nova`, `suspensa` — classificados a partir do estágio do kanban Bitrix.
+
+### Estrutura organizacional
+
+```
+SUPERINTENDÊNCIA STÜPP (ID 3)
+└── COMERCIAL-S (ID 60)
+    ├── SANTOS · MONTEIRO · GEORGII · TALMON
+    ├── STÜPP · HENRIQUE · SEVERO
+    └── Equipes e sub-equipes (Líderes / LT)
+```
+
+Filtros de diretoria, equipe e corretor mapeiam `ASSIGNED_BY_ID` dos deals à árvore de departamentos.
+
+### Webhooks
+
+O token do Bitrix **nunca** vai para o navegador. Todas as chamadas passam pelas API Routes do Next.js.
+
+| Variável | Uso |
+|----------|-----|
+| `BITRIX_WEBHOOK_URL` | Webhook principal (obrigatório) |
+| `BITRIX_WEBHOOK_URL_META` | Org, roletas, metadados (opcional — reduz carga) |
+| `BITRIX_WEBHOOK_URL_DEALS` | Listagem e mutação de deals (opcional) |
+| `BITRIX_PAUSED=true` | Pausa todas as chamadas ao Bitrix (manutenção) |
+
+> Recomendado: criar webhooks extras no Bitrix (Aplicativos → Webhooks de entrada) com permissão CRM para distribuir carga e evitar `operation time limit`.
 
 ---
 
@@ -115,13 +179,12 @@ Disponível em `/esteira-geral` e `/esteira-economico`:
 |--------|------------|
 | Framework | [Next.js 16](https://nextjs.org/) (App Router + Turbopack) |
 | UI | [React 19](https://react.dev/) + [Tailwind CSS v4](https://tailwindcss.com/) + [next-themes](https://github.com/pacocoursey/next-themes) |
-| Estado | [Zustand](https://zustand.docs.pmnd.rs/) (filtros + layout UI) |
+| Estado | [Zustand](https://zustand.docs.pmnd.rs/) |
 | Dados | [TanStack Query v5](https://tanstack.com/query) |
-| Kanban (DnD) | [@dnd-kit](https://dndkit.com/) |
-| Auth | [Supabase Auth](https://supabase.com/docs/guides/auth) — protege o acesso ao dashboard |
+| Kanban | [@dnd-kit](https://dndkit.com/) |
+| Auth | [Supabase Auth](https://supabase.com/docs/guides/auth) + `@supabase/ssr` |
 | Gráficos | [Recharts](https://recharts.org/) + [ApexCharts](https://apexcharts.com/) |
-| Exportação | [jsPDF](https://github.com/parallax/jsPDF) + [jspdf-autotable](https://github.com/simonbengtsson/jsPDF-AutoTable), [xlsx-js-style](https://www.npmjs.com/package/xlsx-js-style) |
-| Datas | [date-fns](https://date-fns.org/) |
+| Exportação | jsPDF, jspdf-autotable, xlsx-js-style |
 | Deploy | [Vercel](https://vercel.com/) |
 | CRM | [Bitrix24 REST API](https://apidocs.bitrix24.com/) |
 
@@ -135,7 +198,6 @@ flowchart LR
         LOGIN[Tela de login]
         UI[Dashboard UI]
         RQ[TanStack Query]
-        EXP[Export PDF / Excel]
     end
 
     subgraph Vercel
@@ -143,20 +205,20 @@ flowchart LR
         API_DASH["/api/dashboard"]
         API_DEALS["/api/deals/*"]
         API_ORG["/api/org"]
-        API_ROL["/api/roletas"]
+        API_ROL["/api/roletas/*"]
         CACHE[(unstable_cache)]
         PROXY["/api/bitrix/*"]
     end
 
     subgraph Bitrix24
         CRM[Deals + Users + Departments]
-        SPA[Roletas SPA · entity 129]
+        SPA[Roletas SPA · 129]
+        CORR[Corretores roleta · 186]
     end
 
     LOGIN --> AUTH
     AUTH --> UI
     UI --> RQ
-    EXP --> RQ
     RQ --> API_DASH
     RQ --> API_DEALS
     RQ --> API_ORG
@@ -167,16 +229,16 @@ flowchart LR
     CACHE --> PROXY
     PROXY --> CRM
     PROXY --> SPA
+    PROXY --> CORR
 ```
 
 ### Fluxo de dados
 
-1. O usuário autentica na **tela de login** (acesso ao painel, não ao Bitrix).
-2. O cliente chama `/api/dashboard` com os filtros aplicados.
-3. O servidor carrega do cache: estrutura org, catálogo de fases, labels de fonte e roletas Stüpp.
-4. Negociações, contagens por esteira e breakdowns (diretoria/equipe) são buscados em paralelo no Bitrix via webhook.
-5. Quando o volume ultrapassa 500 registros por consulta, a API aplica **split automático** por esteira e por intervalo de datas.
-6. Os dados são agregados no servidor (`aggregateLeadsData`) e retornados como JSON pronto para os gráficos e exportações.
+1. Login via Supabase Auth (middleware protege rotas e APIs).
+2. Cliente chama `/api/dashboard` ou `/api/roletas/stats` com filtros aplicados.
+3. Servidor usa cache (`unstable_cache`) para org, fases, fontes e catálogo de roletas.
+4. Deals e contagens são buscados em paralelo no Bitrix; volumes grandes usam **split automático** por esteira e intervalo de datas.
+5. Agregação no servidor (`aggregateLeadsData`, `buildRoletasData`) → JSON pronto para UI e exportação.
 
 ---
 
@@ -186,50 +248,32 @@ flowchart LR
 src/
 ├── app/
 │   ├── api/
-│   │   ├── bitrix/[...path]/   # Proxy seguro para o webhook Bitrix
-│   │   ├── dashboard/          # Endpoint agregado do dashboard
-│   │   ├── deals/              # Mover fase e transferir corretor (unitário e lote)
-│   │   ├── org/                # Estrutura organizacional
-│   │   └── roletas/            # Roletas Stüpp (SPA entity 129)
+│   │   ├── bitrix/[...path]/     # Proxy seguro ao webhook
+│   │   ├── dashboard/            # Dados agregados do painel
+│   │   ├── deals/                # Mover fase e transferir corretor
+│   │   ├── org/                  # Estrutura organizacional
+│   │   └── roletas/              # Catálogo, stats, status e corretores
+│   ├── (protected)/roletas/      # Página de roletas
 │   ├── esteira-geral/
-│   ├── esteira-economico/
-│   └── providers.tsx
-├── api/
-│   ├── bitrix.ts               # Cliente Bitrix (deals, stages, counts, fontes)
-│   ├── bitrixRoletas.ts        # Roletas Stüpp + campo UF_CRM_1734703374
-│   ├── bitrixConfig.ts         # IDs das esteiras
-│   ├── bitrixDepartments.ts    # Árvore de departamentos Stüpp
-│   └── bitrixStages.ts           # Catálogo de fases do funil
+│   └── esteira-economico/
+├── api/                          # Clientes Bitrix (deals, roletas, org)
 ├── components/
-│   ├── brand/                  # StuppLogo + HubOnLogo (troca automática claro/escuro)
-│   ├── charts/                 # Funil, evolução, diretoria, origem + ChartTooltip
-│   ├── filters/                # Filtros + botão Aplicar + RoletaFilter
-│   ├── kanban/                 # LeadsKanbanBoard (DnD, modal, lote)
-│   ├── layout/                 # Sidebar, Header, ExportButton
-│   ├── theme/                  # ThemeProvider + ThemeToggle
-│   └── ui/                     # FilterPanel (drawer), KPICard, ChartCard...
-├── hooks/
-│   ├── useChartTheme.ts        # Cores de gráficos conforme tema ativo
-│   ├── useLeadsData.ts
-│   ├── useStuppOrg.ts
-│   └── useStuppRoletas.ts
+│   ├── charts/                   # Funis, evolução, diretoria, origem
+│   ├── filters/                  # Filtros gerais + RoletaFilter (só ativas)
+│   ├── kanban/                   # LeadsKanbanBoard
+│   ├── roletas/                  # Lista, gestão, filtros do catálogo
+│   └── layout/                   # Sidebar, Header, ExportButton
+├── hooks/                        # useLeadsData, useRoletasData, useStuppOrg...
 ├── lib/
-│   ├── bitrixDealDates.ts      # Datas do kanban por esteira (campos Bitrix)
-│   └── server/                 # Cache, buildDashboardData, webhook
-├── screens/                    # DashboardPage, EsteiraGeral, EsteiraEconomico
-├── store/
-│   ├── filterStore.ts          # Filtros rascunho vs aplicados
-│   └── layoutUiStore.ts        # Sidebar / drawer de filtros
-└── utils/
-    ├── aggregateLeads.ts       # Agregação dos dados
-    ├── buildKanbanBoards.ts    # Montagem e atualização dos boards
-    ├── buildLeadExportDetails.ts
-    ├── leadTiming.ts           # Cálculo de tempo na esteira / sem atualizar
-    ├── exportDashboard.ts      # Contexto e seções de exportação
-    └── excel/                  # Layout Excel estruturado
-lib/supabase/                   # Cliente browser, server e middleware Auth
-supabase/migrations/            # Migrações (ex.: profiles)
-scripts/seed-admin.mjs          # Criação do usuário admin inicial
+│   ├── roletaStatus.ts           # Classificação ativa/nova/suspensa
+│   ├── bitrixDealDates.ts        # Datas do kanban por esteira
+│   └── server/                   # Cache, buildDashboardData, webhooks
+├── screens/                      # DashboardPage, Esteira*, RoletasPage
+├── store/                        # filterStore (rascunho vs aplicado)
+└── utils/                        # Agregação, exportação, filtros de roletas
+lib/supabase/                     # Clientes browser/server + middleware
+scripts/seed-admin.mjs            # Usuário admin inicial
+supabase/migrations/              # Profiles e políticas RLS
 ```
 
 ---
@@ -240,81 +284,72 @@ scripts/seed-admin.mjs          # Criação do usuário admin inicial
 
 - **Node.js** 20+
 - **npm** 9+
-- Webhook de entrada do **Bitrix24** com permissões para:
-  - `crm.deal.list`
-  - `crm.status.list`
-  - `crm.dealcategory.stage.list`
-  - `crm.item.list` (roletas SPA)
-  - `department.get`
-  - `user.get`
+- Webhook Bitrix24 com permissões CRM:
+  - `crm.deal.list`, `crm.deal.update`, `crm.status.list`
+  - `crm.dealcategory.stage.list`, `crm.item.list`, `crm.item.add`, `crm.item.update`, `crm.item.delete`
+  - `department.get`, `user.get`
+- Projeto Supabase com Auth habilitado
 
-### 1. Clonar e instalar
+### Variáveis de ambiente
 
-```bash
-git clone https://github.com/RafaelADSdev/Dashboard-St-pp.git
-cd Dashboard-St-pp
-npm install
-```
-
-### 2. Variáveis de ambiente
-
-Crie um arquivo `.env.local` na raiz do projeto:
+Copie `.env.example` para `.env.local`:
 
 ```env
-# Obrigatório — webhook de entrada do Bitrix24 (nunca commitar)
+# Obrigatório — webhook Bitrix (somente servidor)
 BITRIX_WEBHOOK_URL=https://seu-portal.bitrix24.com.br/rest/USER_ID/TOKEN/
 
-# IDs das esteiras no CRM (padrão: 16 e 64)
+# Opcional — distribui carga entre webhooks
+BITRIX_WEBHOOK_URL_META=https://seu-portal.bitrix24.com.br/rest/1/XXXX/
+BITRIX_WEBHOOK_URL_DEALS=https://seu-portal.bitrix24.com.br/rest/2/YYYY/
+
+# Pausar integração (manutenção)
+# BITRIX_PAUSED=true
+
+# Esteiras
 NEXT_PUBLIC_BITRIX_ESTEIRA_GERAL_ID=16
 NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID=64
+NEXT_PUBLIC_BITRIX_ROLETA_CATEGORY_ID=20
 
-# Supabase Auth — protege o acesso ao dashboard (obrigatório em produção)
+# Supabase Auth
 NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon
 
-# Opcional — apenas para npm run seed:admin (nunca expor no frontend)
+# Apenas servidor — seed:admin (nunca expor no client)
 SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
 ```
 
-> **Autenticação:** o login controla quem acessa o painel. A conexão com o Bitrix é direta via webhook no servidor — usuários do dashboard **não** precisam de credenciais Bitrix.  
-> Crie usuários autorizados no Supabase (painel ou `npm run seed:admin`) e aplique as migrations em `supabase/migrations/` antes do primeiro acesso.  
-> O login usa **nome de usuário**; o sistema converte internamente para e-mail no domínio configurado.
+**Autenticação:** login com **nome de usuário** (convertido internamente para `usuario@stupp.dashboard`). Aplique as migrations em `supabase/migrations/` antes do primeiro acesso.
 
-> **Compatibilidade:** o projeto também aceita `VITE_BITRIX_WEBHOOK_URL` e `VITE_BITRIX_ESTEIRA_*` para ambientes legados.
+**Compatibilidade legada:** também aceita `VITE_BITRIX_WEBHOOK_URL` e `VITE_BITRIX_ESTEIRA_*`.
 
-### 3. Rodar em desenvolvimento
+### Comandos
 
 ```bash
-npm run dev
-```
-
-Acesse [http://localhost:3000](http://localhost:3000).
-
-### 4. Build de produção local
-
-```bash
-npm run build
-npm start
+npm run dev        # Desenvolvimento — http://localhost:3000
+npm run build      # Build de produção
+npm start          # Servidor de produção
+npm run typecheck  # Verificação TypeScript
+npm run seed:admin # Cria usuário admin no Supabase
 ```
 
 ---
 
 ## Deploy na Vercel
 
-O projeto está configurado para deploy automático via GitHub.
-
 1. Conecte o repositório à [Vercel](https://vercel.com/)
-2. Configure as variáveis de ambiente em **Settings → Environment Variables**:
+2. Configure em **Settings → Environment Variables**:
 
-| Variável | Ambiente | Sensível |
-|----------|----------|----------|
-| `BITRIX_WEBHOOK_URL` | Production + Preview | Sim |
-| `NEXT_PUBLIC_BITRIX_ESTEIRA_GERAL_ID` | Production + Preview | Não |
-| `NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID` | Production + Preview | Não |
-| `NEXT_PUBLIC_SUPABASE_URL` | Production + Preview | Não |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production + Preview | Não |
+| Variável | Obrigatória | Sensível |
+|----------|-------------|----------|
+| `BITRIX_WEBHOOK_URL` | Sim | Sim |
+| `BITRIX_WEBHOOK_URL_META` | Não | Sim |
+| `BITRIX_WEBHOOK_URL_DEALS` | Não | Sim |
+| `NEXT_PUBLIC_BITRIX_ESTEIRA_GERAL_ID` | Sim | Não |
+| `NEXT_PUBLIC_BITRIX_ESTEIRA_ECONOMICO_ID` | Sim | Não |
+| `NEXT_PUBLIC_SUPABASE_URL` | Sim | Não |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sim | Não |
 
-3. Deploy manual (opcional):
+3. Deploy automático via push na branch principal, ou manual:
 
 ```bash
 npx vercel --prod
@@ -324,55 +359,55 @@ npx vercel --prod
 
 ## API interna
 
+Todas as rotas exigem sessão Supabase válida.
+
 ### `GET /api/org`
 
-Retorna a estrutura organizacional da Stüpp (diretorias, equipes, líderes) para popular os filtros.
-
-- Cache: **24 horas**
+Estrutura organizacional (diretorias, equipes, corretores). Cache: **24 h**.
 
 ### `GET /api/roletas`
 
-Retorna as roletas Stüpp ativas filtradas do SPA Bitrix (entity type `129`).
+Catálogo completo de roletas Stüpp com corretores e vínculos org. Cache: **24 h**.
 
-- Cache: **24 horas**
-- Exclui roletas marcadas como inativas, descartadas ou de teste
+### `GET /api/roletas/stats`
+
+Estatísticas de leads por roleta no período. Parâmetros: `dateFrom`, `dateTo`, `diretoria`, `equipe`, `corretor`.
+
+### `POST /api/roletas/[id]/status`
+
+Altera status da roleta no kanban Bitrix.
+
+```json
+{ "status": "ativa" }
+```
+
+Valores: `ativa`, `nova`, `suspensa`.
+
+### `POST /api/roletas/[id]/corretores`
+
+Adiciona corretor à roleta.
+
+```json
+{ "corretorUserId": "123", "corretorName": "Nome", "roletaTitle": "Roleta X" }
+```
+
+### `DELETE /api/roletas/[id]/corretores`
+
+Remove corretor. Query: `?recordId=456`.
 
 ### `GET /api/dashboard`
 
-Parâmetros de query:
+Dados agregados do painel.
 
-| Parâmetro | Tipo | Descrição |
-|-----------|------|-----------|
-| `dateFrom` | `YYYY-MM-DD` | Data inicial (obrigatório) |
-| `dateTo` | `YYYY-MM-DD` | Data final (obrigatório) |
-| `esteira` | `TODAS \| GERAL \| ECONOMICO` | Filtro de esteira |
-| `diretoria` | string | ID da diretoria (vazio = todas) |
-| `equipe` | string | ID da equipe (vazio = todas) |
-| `roleta` | string | ID da roleta (vazio = todas) |
+| Parâmetro | Descrição |
+|-----------|-----------|
+| `dateFrom`, `dateTo` | `YYYY-MM-DD` (obrigatórios) |
+| `esteira` | `TODAS` \| `GERAL` \| `ECONOMICO` |
+| `diretoria`, `equipe`, `corretor`, `roleta` | IDs (vazio = todos) |
 
-Exemplo:
-
-```
-GET /api/dashboard?dateFrom=2026-06-01&dateTo=2026-06-26&esteira=TODAS&diretoria=&equipe=&roleta=
-```
-
-Resposta inclui, entre outros campos:
-
-| Campo | Descrição |
-|-------|-----------|
-| `totalLeads`, `geralCount`, `economicoCount` | KPIs |
-| `byDiretoria`, `byTeam` | Distribuição organizacional |
-| `byStage`, `bySource` | Fases do funil e fontes (`SOURCE_ID`) |
-| `funnelGeral`, `funnelEconomico` | Funis por esteira |
-| `overTime` | Evolução diária |
-| `kanbanBoards` | Boards do Kanban por esteira (cards por fase) |
-| `leadDetails` | Detalhamento para exportação (tempos na esteira e sem atualizar) |
-
-- Cache: **10 segundos** (por combinação de filtros)
+Resposta inclui KPIs, `byDiretoria`, `byTeam`, `byStage`, `bySource`, funis, `overTime`, `kanbanBoards`, `leadDetails`. Cache: **10 s** por combinação de filtros.
 
 ### `POST /api/deals/stage`
-
-Atualiza a fase de uma negociação no Bitrix (`STAGE_ID`).
 
 ```json
 { "dealId": "123", "stageId": "C16:NEW" }
@@ -380,122 +415,84 @@ Atualiza a fase de uma negociação no Bitrix (`STAGE_ID`).
 
 ### `POST /api/deals/assign`
 
-Transfere uma negociação para outro corretor (`ASSIGNED_BY_ID`).
-
 ```json
 { "dealId": "123", "assignedById": "456" }
 ```
 
 ### `POST /api/deals/assign/batch`
 
-Transfere várias negociações para o mesmo corretor.
-
 ```json
 { "dealIds": ["123", "456"], "assignedById": "789" }
 ```
-
-Resposta inclui `succeeded` e `failed` para tratamento de falhas parciais.
-
-### `POST/GET /api/bitrix/*`
-
-Proxy interno para o webhook Bitrix. Usado pelo servidor; o webhook **nunca** é exposto ao navegador.
-
----
-
-## Filtros
-
-Os filtros funcionam em modo **rascunho → aplicar**:
-
-1. Abra o painel de filtros pelo botão no header
-2. Ajuste período, esteira, diretoria, equipe e/ou roleta
-3. Clique em **Aplicar filtros** (botão fica azul quando há alterações pendentes)
-4. Use **Limpar filtros** no rodapé do painel para voltar ao padrão
-5. Os dados são recarregados com a combinação selecionada
-
-Na primeira visita, o período padrão (**últimos 7 dias**) já é aplicado automaticamente.
 
 ---
 
 ## Exportação de relatórios
 
-O botão **Exportar** (header) gera relatórios com base nos **filtros aplicados** e na **página atual**.
-
 | Formato | Conteúdo |
 |---------|----------|
-| **Excel (.xlsx)** | Aba Resumo + **Detalhamento** (lead a lead) + Evolução + abas por seção (diretoria, equipe, fase, origem, funil) com ranking, `% do total`, totais e formatação HubON |
-| **PDF** | Relatório tabular por seções, com filtros aplicados no topo |
+| **Excel** | Resumo + Detalhamento (lead a lead) + Evolução + seções com ranking e `%` |
+| **PDF** | Relatório tabular por seções com filtros no topo |
 
-### Detalhamento de leads (Excel e PDF)
-
-Cada lead exportado inclui:
-
-| Campo | Descrição |
-|-------|-----------|
-| Tempo na esteira | Desde a data de chegada ao corretor até o momento da exportação |
-| Última atualização | Data/hora da última movimentação (campos Bitrix por esteira) |
-| Tempo sem atualizar | Dias/horas desde a última movimentação (proxy de inatividade com o corretor) |
-
-Os leads são ordenados pelos **mais parados primeiro**, facilitando follow-up.
-
-Regras comuns:
-
-- Linhas com valor **0** são omitidas nas seções agregadas
-- Nome do arquivo: `dashboard-stupp-{pagina}-{data}.xlsx` / `.pdf`
-- A origem dos leads usa o campo **Fonte** do Bitrix (`SOURCE_ID`)
+Cada lead exportado inclui tempo na esteira, última atualização e tempo sem atualizar. Linhas com valor `0` são omitidas nas seções agregadas.
 
 ---
 
 ## Kanban operacional
 
-O Kanban aparece apenas nas páginas de esteira (`/esteira-geral` e `/esteira-economico`), logo abaixo do KPI.
-
 | Ação | Como usar |
 |------|-----------|
 | Ver detalhes | Clique no card |
-| Mudar fase | Arraste o card para outra coluna (ícone ⋮⋮) |
-| Transferir um lead | No modal → escolher corretor |
-| Transferir em lote | **Selecionar em lote** → marcar cards → **Transferir em lote** |
+| Mudar fase | Arraste para outra coluna |
+| Transferir um lead | Modal → escolher corretor |
+| Transferir em lote | Selecionar em lote → marcar cards → Transferir |
 
-### Datas nos cards (por esteira)
-
-Os campos exibidos seguem o que cada esteira registra no Bitrix (`src/lib/bitrixDealDates.ts`):
+### Datas nos cards
 
 | Esteira | Chegou ao corretor | Última movimentação |
 |---------|-------------------|---------------------|
-| **Comercial Econômico** | `DATE_CREATE` | `DATE_MODIFY` + **Modificado por** (`MODIFY_BY_ID`) |
-| **Comercial Geral** | `UF_CRM_1738332137` (Data - Novos Leads) ou Data de Entrada | Maior data entre as fases do funil (`UF_CRM_173833*`) ou `MOVED_TIME` / `DATE_MODIFY` — exibida como **Data** e **Hora** no card |
+| **Econômico** | `DATE_CREATE` | `DATE_MODIFY` + modificado por |
+| **Geral** | `UF_CRM_1738332137` ou Data de Entrada | Maior data entre fases `UF_CRM_173833*` ou `MOVED_TIME` |
 
-Ao arrastar um card para outra fase, a data de última movimentação é atualizada localmente até o próximo refresh.
-
-Layout idêntico nas duas esteiras: KPI → Kanban → Funil + Evolução → Origem.
+Detalhes em `src/lib/bitrixDealDates.ts`.
 
 ---
 
 ## Performance e confiabilidade
 
-| Otimização | Detalhe |
+| Estratégia | Detalhe |
 |------------|---------|
-| API única | Uma requisição HTTP do cliente por carregamento |
-| Cache de org / fases / fontes / roletas | Cacheados por **24 horas** |
-| Cache de dashboard | Resposta agregada cacheada por **10 segundos** (`dashboard-data-v5`) |
+| API única por tela | Uma requisição HTTP por carregamento de dashboard |
+| Cache longo | Org, fases, fontes e catálogo de roletas — **24 h** |
+| Cache curto | Dashboard agregado — **10 s** |
 | Filtro no Bitrix | `ASSIGNED_BY_ID` e roleta enviados na query quando aplicável |
-| Limite de 500 registros | Split por esteira e por datas; contagens via `countDeals` para breakdowns |
-| Prefetch | Estrutura org e roletas carregadas em background |
+| Split de volume | Acima de 500 registros: divisão por esteira e datas |
+| Retry | Requisições repetidas em rate limit ou timeout |
 | `placeholderData` | Dados anteriores visíveis enquanto novos filtros carregam |
-| Atualização automática | Dados recarregados a cada **10 segundos** |
-| Retry Bitrix | Requisições repetidas em caso de rate limit ou timeout |
+| Pausa de emergência | `BITRIX_PAUSED=true` interrompe chamadas sem derrubar o app |
 
 ---
 
 ## Segurança
 
-- **Acesso ao painel** — tela de login com Supabase Auth; rotas e APIs protegidas por middleware
-- **Acesso ao Bitrix** — webhook de entrada **somente no servidor**; token nunca exposto ao navegador
-- Sessão em cookies gerenciada pelo `@supabase/ssr` (renovação automática no middleware)
-- Rotas `/api/*` e páginas do dashboard exigem autenticação
-- Arquivos `.env` estão no `.gitignore` — nunca commite credenciais, URLs de webhook ou chaves Supabase
-- O proxy `/api/bitrix` concentra as chamadas ao CRM sem expor o token no bundle do cliente
-- **Nunca** exponha a `service_role` key do Supabase no frontend
+- **Painel** — Supabase Auth + middleware em rotas e APIs
+- **Bitrix** — webhook somente no servidor; token nunca no bundle do cliente
+- Sessão em cookies via `@supabase/ssr` com renovação automática
+- `.env` no `.gitignore` — nunca commitar webhooks ou `service_role`
+- Mutações de roletas invalidam cache via `revalidateTag`
+
+---
+
+## Solução de problemas
+
+| Sintoma | Causa provável | Ação |
+|---------|----------------|------|
+| Catálogo de roletas vazio | `categoryId` incorreto ou webhook sem `crm.item.list` | Confirme `NEXT_PUBLIC_BITRIX_ROLETA_CATEGORY_ID=20` |
+| `operation time limit` | Bitrix sobrecarregado | Configure webhooks extras (`_META`, `_DEALS`); aguarde e tente de novo |
+| Integração pausada | `BITRIX_PAUSED=true` | Remova a variável e faça redeploy |
+| Filtro de liderança sem resultados | Roleta sem corretores na entity 186 | Cadastre corretores na aba “Corretores da roleta” no Bitrix |
+| Login não funciona | Migrations ou usuário não criado | Rode `npm run seed:admin` e verifique Supabase URL/keys |
+| Porta 3000 em uso | Outro processo Node | Encerre o processo anterior ou use outra porta no `dev` |
 
 ---
 
@@ -506,7 +503,7 @@ npm run dev        # Servidor de desenvolvimento (porta 3000)
 npm run build      # Build de produção
 npm start          # Servidor de produção
 npm run typecheck  # Verificação TypeScript
-npm run seed:admin # Cria usuário admin no Supabase (requer SERVICE_ROLE_KEY)
+npm run seed:admin # Cria usuário admin no Supabase
 ```
 
 ---

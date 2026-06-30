@@ -12,6 +12,7 @@ function pickDraft(state: {
   dateTo: string
   diretoria: string
   equipe: string
+  corretor: string
   roleta: string
   esteira: FilterValues['esteira']
 }): FilterValues {
@@ -20,6 +21,7 @@ function pickDraft(state: {
     dateTo: state.dateTo,
     diretoria: state.diretoria,
     equipe: state.equipe,
+    corretor: state.corretor,
     roleta: state.roleta,
     esteira: state.esteira,
   }
@@ -31,6 +33,7 @@ function filtersEqual(a: FilterValues, b: FilterValues, ignoreEsteira = false) {
     a.dateTo === b.dateTo &&
     a.diretoria === b.diretoria &&
     a.equipe === b.equipe &&
+    a.corretor === b.corretor &&
     a.roleta === b.roleta &&
     (ignoreEsteira || a.esteira === b.esteira)
   )

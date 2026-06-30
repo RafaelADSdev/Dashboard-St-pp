@@ -7,12 +7,13 @@ export function getCachedDashboard(filters: FilterParams) {
   return unstable_cache(
     async () => buildDashboardData(filters),
     [
-      'dashboard-data-v5',
+      'dashboard-data-v12',
       filters.dateFrom,
       filters.dateTo,
       filters.esteira,
       filters.diretoria,
       filters.equipe,
+      filters.corretor,
       filters.roleta,
     ],
     { revalidate: DASHBOARD_SYNC_SECONDS }

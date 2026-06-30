@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { FilterParams } from '@/api/types'
 import { DASHBOARD_SYNC_SECONDS } from '@/lib/syncConfig'
 import { getCachedDashboard } from '@/lib/server/getCachedDashboard'
+import {
+  BITRIX_PAUSED_MESSAGE,
+  bitrixRouteErrorStatus,
+  isBitrixPaused,
+} from '@/lib/server/bitrixPaused'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,6 +24,7 @@ function parseFilters(searchParams: URLSearchParams): FilterParams | null {
     diretoria: searchParams.get('diretoria') ?? '',
     equipe: searchParams.get('equipe') ?? '',
     roleta: searchParams.get('roleta') ?? '',
+    corretor: searchParams.get('corretor') ?? '',
   }
 }
 
@@ -32,6 +38,13 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  if (isBitrixPaused()) {
+    return NextResponse.json(
+      { error: BITRIX_PAUSED_MESSAGE },
+      { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
+    )
+  }
+
   try {
     const data = await getCachedDashboard(filters)
     return NextResponse.json(data, {
@@ -41,7 +54,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao carregar dashboard'
-    const status = message.includes('operation time limit') ? 503 : 500
-    return NextResponse.json({ error: message }, { status })
+    return NextResponse.json({ error: message }, { status: bitrixRouteErrorStatus(message) })
   }
 }

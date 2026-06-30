@@ -169,7 +169,7 @@ export function moveKanbanCard(
         ? {
             ...stage,
             cards: [
-              { ...movedCard!, dateModify: new Date().toISOString() },
+              movedCard!,
               ...stage.cards,
             ],
           }

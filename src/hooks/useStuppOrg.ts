@@ -14,7 +14,7 @@ async function fetchOrgPreview(): Promise<OrgPreview> {
 
 export function useStuppStructurePreview() {
   return useQuery({
-    queryKey: ['stupp-org'],
+    queryKey: ['stupp-org', 'v2'],
     queryFn: fetchOrgPreview,
     staleTime: 1000 * 60 * 60 * 24,
   })

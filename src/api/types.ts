@@ -109,10 +109,20 @@ export interface LeadsDashboardData {
   equipes: StuppTeamOption[]
 }
 
+export type RoletaOperationalStatus = 'ativa' | 'nova' | 'suspensa'
+
 export interface StuppRoletaOption {
   id: string
   title: string
   isActive: boolean
+  status?: RoletaOperationalStatus
+  liderancaId?: string
+  liderancaName?: string
+  createdAt?: string
+  corretores?: RoletaCorretorMember[]
+  diretoriaIds?: string[]
+  liderancaIds?: string[]
+  equipeIds?: string[]
 }
 
 export interface FilterParams {
@@ -120,6 +130,54 @@ export interface FilterParams {
   dateTo: string
   diretoria: string
   equipe: string
+  corretor: string
   roleta: string
   esteira: string
+}
+
+export interface RoletaStat {
+  id: string
+  title: string
+  status: RoletaOperationalStatus
+  liderancaId: string
+  liderancaName: string
+  createdAt?: string
+  totalLeads: number
+  geralLeads: number
+  economicoLeads: number
+  corretores?: RoletaCorretorMember[]
+  diretoriaIds?: string[]
+  liderancaIds?: string[]
+  equipeIds?: string[]
+}
+
+export interface RoletaCorretorMember {
+  recordId: string
+  nome: string
+  corretorUserId?: string
+  diretorUserId?: string
+  cargoId?: string
+  cargoLabel?: string
+  diretoriaId?: string
+  diretoriaName?: string
+  equipeId?: string
+  liderancaId?: string
+  liderancaName?: string
+  equipe?: string
+}
+
+export interface RoletaMembershipSummary {
+  corretores: RoletaCorretorMember[]
+  diretoriaIds: string[]
+  liderancaIds: string[]
+  equipeIds: string[]
+}
+
+export interface RoletasDashboardData {
+  totalLeads: number
+  activeRoletas: number
+  novasRoletas: number
+  suspensasRoletas: number
+  roletas: RoletaStat[]
+  liderancas: { id: string; name: string }[]
 }

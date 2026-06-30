@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import type { StuppRoletaOption } from '@/api/types'
+import type { RoletaMembershipSummary, StuppRoletaOption } from '@/api/types'
 
-interface RoletasResponse {
+export interface StuppRoletasCatalog {
   roletas: StuppRoletaOption[]
+  membershipByRoletaId: Record<string, RoletaMembershipSummary>
+  diretorias: { id: string; name: string; leaderName?: string }[]
+  liderancas: { id: string; name: string; diretoriaId?: string }[]
 }
 
-async function fetchStuppRoletas(): Promise<StuppRoletaOption[]> {
+async function fetchStuppRoletasCatalog(): Promise<StuppRoletasCatalog> {
   const res = await fetch('/api/roletas')
 
   if (!res.ok) {
@@ -13,14 +16,22 @@ async function fetchStuppRoletas(): Promise<StuppRoletaOption[]> {
     throw new Error(body.error ?? 'Erro ao carregar roletas')
   }
 
-  const data = (await res.json()) as RoletasResponse
-  return data.roletas
+  return res.json() as Promise<StuppRoletasCatalog>
 }
 
-export function useStuppRoletas() {
+export function useStuppRoletasCatalog() {
   return useQuery({
-    queryKey: ['stupp-roletas'],
-    queryFn: fetchStuppRoletas,
+    queryKey: ['stupp-roletas', 'v8'],
+    queryFn: fetchStuppRoletasCatalog,
     staleTime: 1000 * 60 * 60 * 24,
   })
+}
+
+/** @deprecated Prefira useStuppRoletasCatalog — mantido para filtros legados. */
+export function useStuppRoletas() {
+  const query = useStuppRoletasCatalog()
+  return {
+    ...query,
+    data: query.data?.roletas,
+  }
 }

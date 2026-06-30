@@ -2,13 +2,13 @@ import { useStuppStructurePreview } from '@/hooks/useStuppOrg'
 import { useFilterStore } from '@/store/filterStore'
 import { filterLabelClass, filterSelectClass } from '@/components/ui/styles'
 
-export function DiretoriaFilter() {
+export function DiretoriaFilter({ label = 'Diretoria' }: { label?: string }) {
   const { diretoria, setDiretoria } = useFilterStore()
   const { data, isLoading } = useStuppStructurePreview()
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className={filterLabelClass}>Diretoria</label>
+      <label className={filterLabelClass}>{label}</label>
       <select
         value={diretoria}
         onChange={(e) => {

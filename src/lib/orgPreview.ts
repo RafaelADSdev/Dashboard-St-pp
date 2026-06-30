@@ -32,8 +32,12 @@ export function getEquipeOptions(org: StuppOrgStructure): StuppTeamOption[] {
 
 export function resolveAssignedByIds(
   org: StuppOrgStructure,
-  filters: { diretoria: string; equipe: string }
+  filters: { diretoria: string; equipe: string; corretor?: string }
 ): string[] {
+  if (filters.corretor) {
+    return org.allUserIds.includes(filters.corretor) ? [filters.corretor] : []
+  }
+
   if (filters.equipe) {
     const team = org.diretorias
       .flatMap((d) => d.teams)
@@ -65,7 +69,9 @@ export function buildOrgPreview(org: StuppOrgStructure) {
         id: t.id,
         name: t.name,
         label: getTeamLabel(t),
+        leaderId: t.leaderId,
         leaderName: t.leaderName,
+        userIds: t.userIds,
       })),
     })),
   }

@@ -2,7 +2,7 @@ import { useStuppStructurePreview } from '@/hooks/useStuppOrg'
 import { useFilterStore } from '@/store/filterStore'
 import { filterLabelClass, filterSelectClass } from '@/components/ui/styles'
 
-export function EquipeFilter() {
+export function EquipeFilter({ label = 'Equipe' }: { label?: string }) {
   const { equipe, setEquipe, diretoria } = useFilterStore()
   const { data, isLoading } = useStuppStructurePreview()
 
@@ -12,7 +12,7 @@ export function EquipeFilter() {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className={filterLabelClass}>Equipe</label>
+      <label className={filterLabelClass}>{label}</label>
       <select
         value={equipe}
         onChange={(e) => setEquipe(e.target.value)}

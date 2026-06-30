@@ -28,6 +28,7 @@ export function resolveExportEsteira(pathname: string, filters: FilterParams): E
 }
 
 export function resolvePageTitle(pathname: string): string {
+  if (pathname.startsWith('/roletas')) return 'Roletas Stüpp'
   if (pathname.startsWith('/esteira-geral')) return 'Esteira Comercial Geral'
   if (pathname.startsWith('/esteira-economico')) return 'Esteira Comercial Econômico'
   return 'Visão geral comercial'
@@ -277,16 +278,15 @@ export function getPdfSections(ctx: ExportContext): PdfTableSection[] {
 
   if ((ctx.data.leadDetails ?? []).length > 0) {
     sections.push({
-      title: 'Detalhamento — tempo na esteira e sem atualizar',
+      title: 'Detalhamento — data de entrada',
       head: [
         'ID',
         'Negociação',
         'Esteira',
         'Fase',
         'Corretor',
+        'Data entrada',
         'Tempo na esteira',
-        'Última atualização',
-        'Sem atualizar',
       ],
       body: ctx.data.leadDetails.map((lead) => [
         lead.id,
@@ -294,9 +294,8 @@ export function getPdfSections(ctx: ExportContext): PdfTableSection[] {
         lead.esteira,
         lead.stage,
         lead.corretor,
+        lead.dateCreate,
         lead.tempoNaEsteira,
-        lead.dateModify,
-        lead.tempoSemAtualizar,
       ]),
     })
   }

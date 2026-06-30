@@ -5,6 +5,7 @@ import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { EsteiraFilter } from '@/components/filters/EsteiraFilter'
 import { DiretoriaFilter } from '@/components/filters/DiretoriaFilter'
 import { EquipeFilter } from '@/components/filters/EquipeFilter'
+import { CorretorFilter } from '@/components/filters/CorretorFilter'
 import { RoletaFilter } from '@/components/filters/RoletaFilter'
 import { LeadsByTeamPanel } from '@/components/charts/LeadsByTeamPanel'
 import { LeadsBySourceChart } from '@/components/charts/LeadsBySourceChart'
@@ -27,6 +28,7 @@ function DashboardFilters() {
       <EsteiraFilter />
       <DiretoriaFilter />
       <EquipeFilter />
+      <CorretorFilter />
       <RoletaFilter />
     </FilterPanel>
   )
@@ -34,7 +36,7 @@ function DashboardFilters() {
 
 export function DashboardPage() {
   const applied = useAppliedFilters()
-  const { data, isLoading, isFetching, isPending, isError, error } = useLeadsData(applied)
+  const { data, isFetching, isPending, isError, error } = useLeadsData(applied)
   const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
 
   return (
@@ -42,20 +44,22 @@ export function DashboardPage() {
       <DashboardFilters />
 
       <PageShell>
-        {isLoading && !data ? (
-          <LoadingState message="Carregando leads da Superintendência Stüpp..." />
-        ) : isError ? (
+        {isError ? (
           <ErrorState title="Erro ao carregar dados do Bitrix">
-            {(error as Error)?.message?.includes('operation time limit')
-              ? 'O Bitrix está temporariamente sobrecarregado. Aguarde alguns minutos e clique em Atualizar.'
-              : 'Verifique o webhook no arquivo .env'}
+            {(error as Error)?.message?.includes('pausada temporariamente')
+              ? 'A integração com o Bitrix está pausada para reduzir carga no webhook. Tente novamente mais tarde.'
+              : (error as Error)?.message?.includes('operation time limit')
+                ? 'O Bitrix bloqueou consultas de negociações (limite de operação). Aguarde 15–30 minutos sem usar o dashboard ou ative BITRIX_PAUSED=true na Vercel.'
+                : 'Verifique o webhook no arquivo .env'}
           </ErrorState>
+        ) : !data && (isFetching || isPending) ? (
+          <LoadingState message="Carregando leads da Superintendência Stüpp..." />
         ) : (
           <>
             <PageHeader
               badge="Superintendência Stüpp"
               title="Visão geral comercial"
-              subtitle="Acompanhe leads e negociações das esteiras Comercial Geral e Comercial Econômico."
+              subtitle="Leads por data de entrada no corretor. Use Hoje + equipe para ver a chegada do dia."
             />
 
             <FilterApplyingOverlay isActive={isApplyingFilters}>
@@ -67,7 +71,7 @@ export function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                  <ChartCard title="Leads por equipe" description="Resumo por diretoria">
+                  <ChartCard title="Leads por diretoria" description="Volume por diretoria no período">
                     <LeadsByTeamPanel byDiretoria={data?.byDiretoria ?? []} />
                   </ChartCard>
                   <ChartCard title="Evolução no período" description="Comparativo diário entre esteiras">

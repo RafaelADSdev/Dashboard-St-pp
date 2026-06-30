@@ -27,25 +27,30 @@ export function Providers({ children }: { children: ReactNode }) {
     if (isLogin) return
 
     initDates()
-    void queryClient.prefetchQuery({
-      queryKey: ['stupp-org'],
-      queryFn: async () => {
-        const res = await fetch('/api/org')
-        if (!res.ok) throw new Error('Erro ao carregar estrutura')
-        return res.json()
-      },
-      staleTime: 1000 * 60 * 60 * 24,
-    })
-    void queryClient.prefetchQuery({
-      queryKey: ['stupp-roletas'],
-      queryFn: async () => {
-        const res = await fetch('/api/roletas')
-        if (!res.ok) throw new Error('Erro ao carregar roletas')
-        const data = await res.json()
-        return data.roletas
-      },
-      staleTime: 1000 * 60 * 60 * 24,
-    })
+
+    void (async () => {
+      await queryClient.prefetchQuery({
+        queryKey: ['stupp-org'],
+        queryFn: async () => {
+          const res = await fetch('/api/org')
+          if (!res.ok) throw new Error('Erro ao carregar estrutura')
+          return res.json()
+        },
+        staleTime: 1000 * 60 * 60 * 24,
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 400))
+
+      await queryClient.prefetchQuery({
+        queryKey: ['stupp-roletas', 'v5'],
+        queryFn: async () => {
+          const res = await fetch('/api/roletas')
+          if (!res.ok) throw new Error('Erro ao carregar roletas')
+          return res.json()
+        },
+        staleTime: 1000 * 60 * 60 * 24,
+      })
+    })()
   }, [initDates, queryClient, isLogin])
 
   return (

@@ -18,7 +18,6 @@ import {
   Building2,
   Calendar,
   CircleDot,
-  Clock,
   GripVertical,
   Loader2,
   Megaphone,
@@ -33,15 +32,10 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useTheme } from 'next-themes'
 import type { KanbanBoard, KanbanCard, KanbanStage } from '@/api/types'
-import { isGeralCategoryId } from '@/lib/bitrixDealDates'
 import { useStuppStructurePreview } from '@/hooks/useStuppOrg'
 import type { StuppCorretorOption } from '@/lib/orgPreview'
 import { getStageChartColor, withAlpha } from '@/lib/stageColors'
-import {
-  formatBitrixDateDisplay,
-  formatBitrixDateOnly,
-  formatBitrixTimeOnly,
-} from '@/utils/leadTiming'
+import { formatBitrixDateOnly } from '@/utils/leadTiming'
 import { moveKanbanCard, updateKanbanCardAssignee, updateKanbanCardsAssignee } from '@/utils/buildKanbanBoards'
 
 interface Props {
@@ -74,10 +68,6 @@ function columnDropId(boardCategoryId: string, stageId: string) {
 
 function cardDragId(cardId: string) {
   return `card-${cardId}`
-}
-
-function formatDealDate(value: string) {
-  return formatBitrixDateDisplay(value)
 }
 
 function KanbanAssignCorretor({
@@ -204,22 +194,12 @@ function KanbanLeadModal({
   transferError?: string
 }) {
   const { card, stageName, stageColor } = selected
-  const isGeral = isGeralCategoryId(card.categoryId)
   const fields = [
     { icon: UserRound, label: 'Responsável', value: card.assignedByName },
     { icon: Building2, label: 'Diretoria', value: card.diretoria },
     { icon: CircleDot, label: 'Roleta', value: card.roleta },
     { icon: Megaphone, label: 'Origem', value: card.source },
-    { icon: Calendar, label: 'Chegou ao corretor', value: formatBitrixDateOnly(card.dateCreate) },
-    ...(isGeral
-      ? [
-          { icon: Calendar, label: 'Data', value: formatBitrixDateOnly(card.dateModify) },
-          { icon: Clock, label: 'Hora', value: formatBitrixTimeOnly(card.dateModify) },
-        ]
-      : [
-          { icon: Clock, label: 'Modificado em', value: formatDealDate(card.dateModify) },
-          { icon: UserRound, label: 'Modificado por', value: card.modifiedByName || '—' },
-        ]),
+    { icon: Calendar, label: 'Data de entrada', value: formatBitrixDateOnly(card.dateCreate) },
   ]
 
   useEffect(() => {
@@ -481,34 +461,9 @@ function KanbanDealCard({
           <p className="mt-0.5 truncate text-[11px] text-slate-400 dark:text-slate-500">{card.diretoria}</p>
           <div className="mt-1.5 space-y-0.5 text-[10px] leading-tight text-slate-400 dark:text-slate-500">
             <p>
-              <span className="font-medium text-slate-500 dark:text-slate-400">Chegou:</span>{' '}
+              <span className="font-medium text-slate-500 dark:text-slate-400">Entrada:</span>{' '}
               {formatBitrixDateOnly(card.dateCreate)}
             </p>
-            {isGeralCategoryId(card.categoryId) ? (
-              <>
-                <p>
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Data:</span>{' '}
-                  {formatBitrixDateOnly(card.dateModify)}
-                </p>
-                <p>
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Hora:</span>{' '}
-                  {formatBitrixTimeOnly(card.dateModify)}
-                </p>
-              </>
-            ) : (
-              <>
-                <p>
-                  <span className="font-medium text-slate-500 dark:text-slate-400">Modificado em:</span>{' '}
-                  {formatBitrixDateOnly(card.dateModify)} · {formatBitrixTimeOnly(card.dateModify)}
-                </p>
-                {card.modifiedByName && card.modifiedByName !== 'Sem registro' ? (
-                  <p className="truncate">
-                    <span className="font-medium text-slate-500 dark:text-slate-400">Por:</span>{' '}
-                    {card.modifiedByName}
-                  </p>
-                ) : null}
-              </>
-            )}
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
             <span
