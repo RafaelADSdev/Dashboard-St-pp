@@ -124,6 +124,7 @@ function RoletaRow({
             corretorOptions={corretorOptions}
             filters={filters}
             liderancaTeam={liderancaTeam}
+            statsLoading={statsLoading}
           />
         </div>
       ) : null}

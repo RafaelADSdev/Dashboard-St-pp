@@ -20,7 +20,26 @@ function buildEmptyStat(roleta: StuppRoleta): RoletaStat {
     totalLeads: 0,
     geralLeads: 0,
     economicoLeads: 0,
+    corretorLeadCounts: {},
   }
+}
+
+function bumpCorretorLeadCount(
+  stat: RoletaStat,
+  corretorUserId: string,
+  categoryId: string
+) {
+  if (!corretorUserId) return
+
+  const counts = stat.corretorLeadCounts ?? {}
+  const current = counts[corretorUserId] ?? { totalLeads: 0, geralLeads: 0, economicoLeads: 0 }
+
+  current.totalLeads += 1
+  if (isGeralCategory(categoryId)) current.geralLeads += 1
+  if (isEconomicoCategory(categoryId)) current.economicoLeads += 1
+
+  counts[corretorUserId] = current
+  stat.corretorLeadCounts = counts
 }
 
 export function aggregateRoletasStats(
@@ -61,6 +80,7 @@ export function aggregateRoletasStats(
     stat.totalLeads += 1
     if (isGeralCategory(snapshot.category_id)) stat.geralLeads += 1
     if (isEconomicoCategory(snapshot.category_id)) stat.economicoLeads += 1
+    bumpCorretorLeadCount(stat, snapshot.assigned_by_id, snapshot.category_id)
   }
 
   const roletaList = [...counts.values()].sort(
@@ -180,6 +200,7 @@ export function mergeCatalogWithLeadCounts(
         totalLeads: 0,
         geralLeads: 0,
         economicoLeads: 0,
+        corretorLeadCounts: {},
       }
     )
   })

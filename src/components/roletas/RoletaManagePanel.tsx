@@ -17,6 +17,7 @@ import {
 } from '@/utils/roletaOrgFilter'
 import type { RoletasFilterState } from '@/utils/filterRoletas'
 import { groupCorretoresByLideranca } from '@/utils/groupCorretoresByLideranca'
+import { formatNumber } from '@/utils/formatters'
 import { RoletaStatusBadge } from './RoletaStatusBadge'
 import { filterInputClass } from '@/components/ui/styles'
 
@@ -25,6 +26,7 @@ interface Props {
   corretorOptions: StuppCorretorOption[]
   filters: RoletasFilterState
   liderancaTeam?: LiderancaTeamFilter
+  statsLoading?: boolean
 }
 
 function isCorretorHighlighted(
@@ -48,6 +50,7 @@ export function RoletaManagePanel({
   corretorOptions,
   filters,
   liderancaTeam,
+  statsLoading,
 }: Props) {
   const { updateStatus, addCorretor, removeCorretor } = useRoletaMutations()
   const [addQuery, setAddQuery] = useState('')
@@ -71,14 +74,13 @@ export function RoletaManagePanel({
 
   const filteredAddOptions = useMemo(() => {
     const normalized = addQuery.trim().toLowerCase()
-    if (!normalized) return availableCorretores.slice(0, 30)
-    return availableCorretores
-      .filter((item) =>
-        [item.name, item.equipe, item.diretoria].some((part) =>
-          part.toLowerCase().includes(normalized)
-        )
+    if (!normalized) return availableCorretores
+
+    return availableCorretores.filter((item) =>
+      [item.name, item.equipe, item.diretoria].some((part) =>
+        part.toLowerCase().includes(normalized)
       )
-      .slice(0, 30)
+    )
   }, [availableCorretores, addQuery])
 
   const isUpdatingStatus = updateStatus.isPending && updateStatus.variables?.roletaId === roleta.id
@@ -175,7 +177,13 @@ export function RoletaManagePanel({
                   {lideranca}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {members.map((corretor) => (
+                  {[...members]
+                    .sort(
+                      (a, b) =>
+                        (b.totalLeads ?? 0) - (a.totalLeads ?? 0) ||
+                        a.nome.localeCompare(b.nome, 'pt-BR')
+                    )
+                    .map((corretor) => (
                     <span
                       key={corretor.recordId}
                       className={clsx(
@@ -191,6 +199,16 @@ export function RoletaManagePanel({
                         {corretor.cargoLabel ? (
                           <span className="ml-1 opacity-70">· {corretor.cargoLabel}</span>
                         ) : null}
+                      </span>
+                      <span
+                        className="ml-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600 dark:bg-slate-900/50 dark:text-slate-300"
+                        title={
+                          statsLoading
+                            ? 'Carregando leads do período...'
+                            : `Geral: ${formatNumber(corretor.geralLeads ?? 0)} · Econômico: ${formatNumber(corretor.economicoLeads ?? 0)}`
+                        }
+                      >
+                        {statsLoading ? '…' : formatNumber(corretor.totalLeads ?? 0)}
                       </span>
                       <button
                         type="button"
@@ -224,7 +242,10 @@ export function RoletaManagePanel({
             <input
               type="search"
               value={addQuery}
-              onChange={(event) => setAddQuery(event.target.value)}
+              onChange={(event) => {
+                setAddQuery(event.target.value)
+                setSelectedCorretorId('')
+              }}
               placeholder="Buscar corretor Stüpp..."
               className={clsx(filterInputClass, 'w-full pl-9')}
             />
@@ -255,6 +276,12 @@ export function RoletaManagePanel({
             Adicionar
           </button>
         </div>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          {filteredAddOptions.length === availableCorretores.length
+            ? `${availableCorretores.length} corretores disponíveis`
+            : `${filteredAddOptions.length} de ${availableCorretores.length} corretores`}
+          {addQuery.trim() ? ' — refine a busca pelo nome, equipe ou diretoria' : ''}
+        </p>
       </div>
 
       {feedback ? (

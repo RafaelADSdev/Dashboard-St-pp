@@ -1,6 +1,24 @@
-import type { RoletasDashboardData, RoletaStat, StuppRoletaOption } from '@/api/types'
+import type { RoletasDashboardData, RoletaCorretorMember, RoletaStat, StuppRoletaOption } from '@/api/types'
 import type { RoletaOperationalStatus } from '@/lib/roletaStatus'
 import { SEM_LIDERANCA_ID } from '@/lib/resolveRoletaLideranca'
+
+function enrichCorretoresWithLeadCounts(
+  corretores: RoletaCorretorMember[],
+  leadCounts?: RoletaStat['corretorLeadCounts']
+): RoletaCorretorMember[] {
+  return corretores.map((corretor) => {
+    const counts = corretor.corretorUserId
+      ? leadCounts?.[corretor.corretorUserId]
+      : undefined
+
+    return {
+      ...corretor,
+      totalLeads: counts?.totalLeads ?? 0,
+      geralLeads: counts?.geralLeads ?? 0,
+      economicoLeads: counts?.economicoLeads ?? 0,
+    }
+  })
+}
 
 export function mergeRoletasPageData(
   catalog: StuppRoletaOption[] | undefined,
@@ -19,18 +37,25 @@ export function mergeRoletasPageData(
       liderancaId: item.liderancaId ?? SEM_LIDERANCA_ID,
       liderancaName: item.liderancaName ?? 'Sem liderança',
       createdAt: item.createdAt,
-      corretores: item.corretores ?? [],
       diretoriaIds: item.diretoriaIds ?? [],
       liderancaIds: item.liderancaIds ?? [],
       equipeIds: item.equipeIds ?? [],
     }
 
     if (fromStats) {
-      return { ...fromStats, ...meta }
+      return {
+        ...fromStats,
+        ...meta,
+        corretores: enrichCorretoresWithLeadCounts(
+          item.corretores ?? [],
+          fromStats.corretorLeadCounts
+        ),
+      }
     }
 
     return {
       ...meta,
+      corretores: enrichCorretoresWithLeadCounts(item.corretores ?? []),
       totalLeads: 0,
       geralLeads: 0,
       economicoLeads: 0,

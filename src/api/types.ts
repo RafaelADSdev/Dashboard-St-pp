@@ -149,6 +149,10 @@ export interface RoletaStat {
   diretoriaIds?: string[]
   liderancaIds?: string[]
   equipeIds?: string[]
+  corretorLeadCounts?: Record<
+    string,
+    { totalLeads: number; geralLeads: number; economicoLeads: number }
+  >
 }
 
 export interface RoletaCorretorMember {
@@ -164,6 +168,9 @@ export interface RoletaCorretorMember {
   liderancaId?: string
   liderancaName?: string
   equipe?: string
+  totalLeads?: number
+  geralLeads?: number
+  economicoLeads?: number
 }
 
 export interface RoletaMembershipSummary {
