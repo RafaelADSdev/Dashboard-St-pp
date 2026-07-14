@@ -5,7 +5,7 @@ Painel operacional para acompanhar negociações, esteiras comerciais e **roleta
 | | |
 |---|---|
 | **Produção** | [dashboard-st-pp.vercel.app](https://dashboard-st-pp.vercel.app) |
-| **Repositório** | [github.com/RafaelADSdev/Dashboard-St-pp](https://github.com/RafaelADSdev/Dashboard-St-pp) |
+| **Repositório** | [https://github.com/Hub-On-Tecnologia/dashboard-stupp/tree/master](https://github.com/Hub-On-Tecnologia/dashboard-stupp/tree/master) |
 | **Stack** | Next.js 16 · React 19 · Tailwind v4 · Supabase Auth · Bitrix24 REST |
 
 ---
@@ -13,7 +13,7 @@ Painel operacional para acompanhar negociações, esteiras comerciais e **roleta
 ## Início rápido
 
 ```bash
-git clone https://github.com/RafaelADSdev/Dashboard-St-pp.git
+git clone https://github.com/Hub-On-Tecnologia/dashboard-stupp/tree/master
 cd Dashboard-St-pp
 npm install
 cp .env.example .env.local   # preencha o webhook Bitrix e o Supabase
