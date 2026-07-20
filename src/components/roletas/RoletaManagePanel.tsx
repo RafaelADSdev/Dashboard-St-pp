@@ -11,6 +11,7 @@ import {
   type RoletaOperationalStatus,
 } from '@/lib/roletaStatus'
 import { useRoletaMutations } from '@/hooks/useRoletaMutations'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
 import {
   corretorMatchesLiderancaTeam,
   type LiderancaTeamFilter,
@@ -53,6 +54,7 @@ export function RoletaManagePanel({
   statsLoading,
 }: Props) {
   const { updateStatus, addCorretor, removeCorretor } = useRoletaMutations()
+  const { canManageRoletaStatus, canManageRoletaCorretores } = useUserPermissions()
   const [addQuery, setAddQuery] = useState('')
   const [selectedCorretorId, setSelectedCorretorId] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -137,6 +139,7 @@ export function RoletaManagePanel({
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Status da roleta
         </p>
+        {canManageRoletaStatus ? (
         <div className="flex flex-wrap gap-2">
           {ROLETA_STATUS_ORDER.map((status) => (
             <button
@@ -158,6 +161,14 @@ export function RoletaManagePanel({
           ))}
           {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
         </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <RoletaStatusBadge status={roleta.status} />
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              Você não tem permissão para alterar o status.
+            </span>
+          </div>
+        )}
       </div>
 
       <div>
@@ -213,7 +224,7 @@ export function RoletaManagePanel({
                       <button
                         type="button"
                         title="Remover corretor"
-                        disabled={removingRecordId === corretor.recordId}
+                        disabled={!canManageRoletaCorretores || removingRecordId === corretor.recordId}
                         onClick={() => handleRemoveCorretor(corretor.recordId, corretor.nome)}
                         className="ml-0.5 rounded-full p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-500/10 dark:hover:text-red-300"
                       >
@@ -232,6 +243,7 @@ export function RoletaManagePanel({
         )}
       </div>
 
+      {canManageRoletaCorretores ? (
       <div>
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Adicionar corretor
@@ -283,6 +295,11 @@ export function RoletaManagePanel({
           {addQuery.trim() ? ' — refine a busca pelo nome, equipe ou diretoria' : ''}
         </p>
       </div>
+      ) : (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Você não tem permissão para adicionar ou remover corretores nesta roleta.
+        </p>
+      )}
 
       {feedback ? (
         <p className="text-xs text-slate-600 dark:text-slate-300">{feedback}</p>

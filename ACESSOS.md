@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Repositório GitHub | https://github.com/RafaelADSdev/Dashboard-St-pp | — | conta GitHub |
 | Produção (Vercel) | https://dashboard-st-pp.vercel.app | — | painel Vercel |
-| Supabase (projeto) | https://supabase.com/dashboard/project/vhtztzilrrlbflicmeft | — | painel Supabase |
+| Supabase (projeto) | https://supabase.com/dashboard/project/hejtayrfskmnekcykvjv | — | painel Supabase |
 | Bitrix24 (webhook) | portal `*.bitrix24.com.br` | — | `$BITRIX_WEBHOOK_URL` (`.env.local` / Vercel env) |
 | Supabase service role | — | — | `$SUPABASE_SERVICE_ROLE_KEY` (só servidor / seed) |
 

@@ -4,8 +4,6 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_PROJECT_REF = 'hejtayrfskmnekcykvjv'
 const DEFAULT_SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`
 const USERNAME_EMAIL_DOMAIN = 'stupp.dashboard'
-const ADMIN_USERNAME = 'admin'
-const ADMIN_PASSWORD = 'admin123'
 
 function usernameToEmail(username) {
   const normalized = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '')
@@ -38,8 +36,9 @@ function loadEnvFile(path) {
   }
 }
 
-async function ensureAdminUser(supabase) {
-  const email = usernameToEmail(ADMIN_USERNAME)
+async function ensureUser(supabase, { username, password, role }) {
+  const email = usernameToEmail(username)
+  const isAdmin = role === 'admin'
 
   const { data: existing, error: listError } = await supabase.auth.admin.listUsers({
     page: 1,
@@ -51,15 +50,19 @@ async function ensureAdminUser(supabase) {
   const found = existing.users.find(
     (user) =>
       user.email?.toLowerCase() === email ||
-      user.user_metadata?.username === ADMIN_USERNAME
+      user.user_metadata?.username === username
   )
+
+  const appMetadata = isAdmin
+    ? { role: 'admin', visao: 'admin', esteira: 'TODAS', diretoria_ids: [], equipe_id: null, permissions: [] }
+    : { role: 'user' }
 
   if (found) {
     const { data, error } = await supabase.auth.admin.updateUserById(found.id, {
-      password: ADMIN_PASSWORD,
+      password,
       email_confirm: true,
-      app_metadata: { role: 'admin' },
-      user_metadata: { username: ADMIN_USERNAME },
+      app_metadata: appMetadata,
+      user_metadata: { username },
     })
     if (error) throw error
     return { action: 'updated', userId: data.user.id }
@@ -67,23 +70,24 @@ async function ensureAdminUser(supabase) {
 
   const { data, error } = await supabase.auth.admin.createUser({
     email,
-    password: ADMIN_PASSWORD,
+    password,
     email_confirm: true,
-    app_metadata: { role: 'admin' },
-    user_metadata: { username: ADMIN_USERNAME },
+    app_metadata: appMetadata,
+    user_metadata: { username },
   })
 
   if (error) throw error
   return { action: 'created', userId: data.user.id }
 }
 
-async function ensureAdminProfile(supabase, userId) {
+async function ensureProfile(supabase, userId, username, role) {
+  const isAdmin = role === 'admin'
   const { error } = await supabase.from('profiles').upsert(
     {
       id: userId,
-      username: ADMIN_USERNAME,
-      role: 'admin',
-      visao: 'admin',
+      username,
+      role: isAdmin ? 'admin' : 'user',
+      visao: isAdmin ? 'admin' : 'lider',
       esteira: 'TODAS',
       diretoria_ids: [],
       equipe_id: null,
@@ -98,41 +102,51 @@ async function ensureAdminProfile(supabase, userId) {
 }
 
 async function main() {
+  const username = process.argv[2]?.trim().toLowerCase()
+  const password = process.argv[3]
+  const role = process.argv[4]?.trim().toLowerCase() || 'admin'
+
+  if (!username || !password) {
+    console.error('Uso: node scripts/seed-user.mjs <usuario> <senha> [admin|user]')
+    process.exit(1)
+  }
+
+  if (password.length < 6) {
+    console.error('A senha deve ter no mínimo 6 caracteres.')
+    process.exit(1)
+  }
+
   const localEnv = loadEnvFile('.env.local')
   const rootEnv = loadEnvFile('.env')
 
   const url =
     process.env.NEXT_PUBLIC_SUPABASE_URL ??
-    process.env.VITE_SUPABASE_URL ??
     localEnv.NEXT_PUBLIC_SUPABASE_URL ??
-    localEnv.VITE_SUPABASE_URL ??
     rootEnv.NEXT_PUBLIC_SUPABASE_URL ??
-    rootEnv.VITE_SUPABASE_URL ??
     DEFAULT_SUPABASE_URL
 
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_SECRET_KEY ??
     localEnv.SUPABASE_SERVICE_ROLE_KEY ??
+    localEnv.SUPABASE_SECRET_KEY ??
     rootEnv.SUPABASE_SERVICE_ROLE_KEY
 
   if (!serviceRoleKey) {
-    console.error(
-      'Defina SUPABASE_SERVICE_ROLE_KEY no .env.local (Supabase → Settings → API → service_role).'
-    )
+    console.error('Defina SUPABASE_SERVICE_ROLE_KEY no .env.local.')
     process.exit(1)
   }
-
-  console.log(`Projeto: ${SUPABASE_PROJECT_REF}`)
-  console.log(`URL: ${url}`)
 
   const supabase = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  const result = await ensureAdminUser(supabase)
-  await ensureAdminProfile(supabase, result.userId)
+  const result = await ensureUser(supabase, { username, password, role })
+  await ensureProfile(supabase, result.userId, username, role)
 
-  console.log(`Admin ${result.action}: usuário "${ADMIN_USERNAME}" / senha "${ADMIN_PASSWORD}"`)
+  console.log(
+    `Usuário ${result.action}: "${username}" (${role}) — login com usuário "${username}"`
+  )
 }
 
 main().catch((error) => {

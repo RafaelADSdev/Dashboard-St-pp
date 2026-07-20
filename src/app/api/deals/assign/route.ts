@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateDealAssignee } from '@/api/bitrix'
 import { getDealsBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
+import { requireUserPermission } from '@/lib/supabase/access'
 import { bitrixRouteErrorStatus, isBitrixPaused, BITRIX_PAUSED_MESSAGE } from '@/lib/server/bitrixPaused'
 
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,11 @@ export async function POST(request: Request) {
       { error: BITRIX_PAUSED_MESSAGE },
       { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
     )
+  }
+
+  const auth = await requireUserPermission('leads_transferir')
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
   try {

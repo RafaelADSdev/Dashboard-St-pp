@@ -5,6 +5,7 @@ import {
   removeCorretorFromRoleta,
 } from '@/api/bitrixRoletaMutations'
 import { getCachedOrgStructure } from '@/lib/server/cachedBitrix'
+import { requireUserPermission } from '@/lib/supabase/access'
 import { getMetaBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
 import {
   BITRIX_PAUSED_MESSAGE,
@@ -24,6 +25,11 @@ export async function POST(
       { error: BITRIX_PAUSED_MESSAGE },
       { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
     )
+  }
+
+  const auth = await requireUserPermission('roleta_corretores')
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
   try {
@@ -82,6 +88,11 @@ export async function DELETE(
       { error: BITRIX_PAUSED_MESSAGE },
       { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
     )
+  }
+
+  const auth = await requireUserPermission('roleta_corretores')
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
   try {

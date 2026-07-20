@@ -33,6 +33,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTheme } from 'next-themes'
 import type { KanbanBoard, KanbanCard, KanbanStage } from '@/api/types'
 import { useStuppStructurePreview } from '@/hooks/useStuppOrg'
+import { useUserPermissions } from '@/hooks/useUserPermissions'
 import type { StuppCorretorOption } from '@/lib/orgPreview'
 import { getStageChartColor, withAlpha } from '@/lib/stageColors'
 import { formatBitrixDateOnly } from '@/utils/leadTiming'
@@ -185,6 +186,7 @@ function KanbanLeadModal({
   onTransfer,
   isTransferring,
   transferError,
+  canTransfer,
 }: {
   selected: SelectedCard
   onClose: () => void
@@ -192,6 +194,7 @@ function KanbanLeadModal({
   onTransfer: (corretor: StuppCorretorOption) => void
   isTransferring: boolean
   transferError?: string
+  canTransfer: boolean
 }) {
   const { card, stageName, stageColor } = selected
   const fields = [
@@ -279,14 +282,20 @@ function KanbanLeadModal({
             ))}
           </dl>
 
-          <KanbanAssignCorretor
-            corretores={corretores}
-            onTransfer={onTransfer}
-            isPending={isTransferring}
-            error={transferError}
-            excludeAssigneeId={card.assignedById}
-            resetKey={card.id}
-          />
+          {canTransfer ? (
+            <KanbanAssignCorretor
+              corretores={corretores}
+              onTransfer={onTransfer}
+              isPending={isTransferring}
+              error={transferError}
+              excludeAssigneeId={card.assignedById}
+              resetKey={card.id}
+            />
+          ) : (
+            <p className="border-t border-slate-100 px-5 py-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+              Você não tem permissão para transferir leads.
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -385,6 +394,7 @@ function KanbanDealCard({
   batchMode,
   onSelect,
   onToggleBatch,
+  canDrag = true,
   isOverlay = false,
 }: {
   card: KanbanCard
@@ -396,12 +406,13 @@ function KanbanDealCard({
   batchMode?: boolean
   onSelect?: (card: KanbanCard) => void
   onToggleBatch?: (card: KanbanCard) => void
+  canDrag?: boolean
   isOverlay?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: cardDragId(card.id),
     data: { type: 'card', card, stageId, boardCategoryId } satisfies DragData,
-    disabled: batchMode && !isOverlay,
+    disabled: !canDrag || (batchMode && !isOverlay),
   })
 
   const style = transform
@@ -439,7 +450,7 @@ function KanbanDealCard({
               <Square className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             )}
           </button>
-        ) : (
+        ) : canDrag ? (
           <button
             type="button"
             className="mt-1 shrink-0 cursor-grab rounded p-0.5 text-slate-300 dark:text-slate-600 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-500 dark:hover:text-slate-400 active:cursor-grabbing"
@@ -449,6 +460,8 @@ function KanbanDealCard({
           >
             <GripVertical className="h-4 w-4" />
           </button>
+        ) : (
+          <span className="mt-1 inline-flex h-5 w-5 shrink-0" aria-hidden />
         )}
 
         <button
@@ -495,6 +508,7 @@ function KanbanColumn({
   batchMode,
   onSelectCard,
   onToggleBatch,
+  canDrag = true,
   expanded = false,
 }: {
   stage: KanbanStage
@@ -505,6 +519,7 @@ function KanbanColumn({
   batchMode: boolean
   onSelectCard: (card: KanbanCard, stageName: string, stageColor: string) => void
   onToggleBatch: (card: KanbanCard) => void
+  canDrag?: boolean
   expanded?: boolean
 }) {
   const { resolvedTheme } = useTheme()
@@ -571,6 +586,7 @@ function KanbanColumn({
               isDetailSelected={detailSelectedId === card.id}
               isBatchSelected={batchSelectedIds.has(card.id)}
               batchMode={batchMode}
+              canDrag={canDrag}
               onSelect={(item) => onSelectCard(item, stage.name, stageColor)}
               onToggleBatch={onToggleBatch}
             />
@@ -590,6 +606,7 @@ function KanbanBoardView({
   batchMode,
   onSelectCard,
   onToggleBatch,
+  canDrag = true,
   expanded = false,
 }: {
   board: KanbanBoard
@@ -600,6 +617,7 @@ function KanbanBoardView({
   batchMode: boolean
   onSelectCard: (card: KanbanCard, stageName: string, stageColor: string) => void
   onToggleBatch: (card: KanbanCard) => void
+  canDrag?: boolean
   expanded?: boolean
 }) {
   const [activeDrag, setActiveDrag] = useState<DragData | null>(null)
@@ -652,6 +670,7 @@ function KanbanBoardView({
               detailSelectedId={detailSelectedId}
               batchSelectedIds={batchSelectedIds}
               batchMode={batchMode}
+              canDrag={canDrag}
               onSelectCard={onSelectCard}
               onToggleBatch={onToggleBatch}
               expanded={expanded}
@@ -680,6 +699,7 @@ function KanbanBoardView({
 export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
   const queryClient = useQueryClient()
   const { data: orgPreview } = useStuppStructurePreview()
+  const { canMoveEsteira, canTransferLeads } = useUserPermissions()
   const [localBoards, setLocalBoards] = useState(boards)
   const [error, setError] = useState('')
   const [transferError, setTransferError] = useState('')
@@ -857,6 +877,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
     toStageId: string,
     _boardCategoryId: string
   ) {
+    if (!canMoveEsteira) return
     moveMutation.mutate({ dealId: cardId, stageId: toStageId })
   }
 
@@ -876,6 +897,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
   }
 
   function handleStartBatchMode() {
+    if (!canTransferLeads) return
     setSelected(null)
     setBatchMode(true)
     setBatchSelectedIds(new Set())
@@ -969,7 +991,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
             </button>
           </div>
         </div>
-      ) : (
+      ) : canTransferLeads ? (
         <div className="flex justify-end">
           <button
             type="button"
@@ -980,7 +1002,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
             Selecionar em lote
           </button>
         </div>
-      )}
+      ) : null}
 
       {localBoards.map((board) => (
         <div key={board.categoryId} className="space-y-3">
@@ -995,6 +1017,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
             detailSelectedId={selected?.card.id}
             batchSelectedIds={batchSelectedIds}
             batchMode={batchMode}
+            canDrag={canMoveEsteira}
             onSelectCard={handleSelectCard}
             onToggleBatch={handleToggleBatch}
             expanded={expanded}
@@ -1010,6 +1033,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
           onTransfer={handleTransferCorretor}
           isTransferring={assignMutation.isPending}
           transferError={transferError}
+          canTransfer={canTransferLeads}
         />
       ) : null}
 
@@ -1026,8 +1050,14 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
 
       <p className="text-xs text-slate-400 dark:text-slate-500">
         {batchMode
-          ? 'Marque os cards desejados e use “Transferir em lote” · Arraste pelo ícone ⋮⋮ fora do modo lote'
-          : 'Clique no card para abrir os detalhes · Use “Selecionar em lote” para transferir vários leads'}
+          ? 'Marque os cards desejados e use “Transferir em lote”'
+          : canMoveEsteira && canTransferLeads
+            ? 'Clique no card para abrir os detalhes · Arraste pelo ícone ⋮⋮ para mover fases · Use “Selecionar em lote” para transferir leads'
+            : canMoveEsteira
+              ? 'Clique no card para abrir os detalhes · Arraste pelo ícone ⋮⋮ para mover fases'
+              : canTransferLeads
+                ? 'Clique no card para abrir os detalhes · Use “Selecionar em lote” para transferir leads'
+                : 'Clique no card para visualizar os detalhes do lead'}
       </p>
     </div>
   )

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { updateRoletaStatus } from '@/api/bitrixRoletaMutations'
 import type { RoletaOperationalStatus } from '@/lib/roletaStatus'
+import { requireUserPermission } from '@/lib/supabase/access'
 import { getMetaBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
 import {
   BITRIX_PAUSED_MESSAGE,
@@ -23,6 +24,11 @@ export async function POST(
       { error: BITRIX_PAUSED_MESSAGE },
       { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
     )
+  }
+
+  const auth = await requireUserPermission('roleta_status')
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
   try {

@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Building2, CircleDot, LayoutDashboard, PanelLeftClose, PanelLeftOpen, TrendingUp } from 'lucide-react'
+import { Building2, CircleDot, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Shield, TrendingUp } from 'lucide-react'
 import clsx from 'clsx'
 import { StuppLogo } from '@/components/brand/StuppLogo'
 import { HubOnLogo } from '@/components/brand/HubOnLogo'
 import { useLayoutUiStore } from '@/store/layoutUiStore'
+import { useCurrentProfile } from '@/hooks/useCurrentProfile'
 
 const navItems = [
   { to: '/', label: 'Visão geral', icon: LayoutDashboard },
@@ -15,10 +16,15 @@ const navItems = [
   { to: '/roletas', label: 'Roletas', icon: CircleDot },
 ]
 
+const adminNavItems = [{ to: '/acessos', label: 'Gestão de acesso', icon: Shield }]
+
 export function Sidebar() {
   const pathname = usePathname() ?? '/'
   const sidebarOpen = useLayoutUiStore((s) => s.sidebarOpen)
   const toggleSidebar = useLayoutUiStore((s) => s.toggleSidebar)
+  const { data: profile } = useCurrentProfile()
+
+  const items = profile?.isAdmin ? [...navItems, ...adminNavItems] : navItems
 
   return (
     <aside
@@ -65,7 +71,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
-        {navItems.map(({ to, label, icon: Icon }) => {
+        {items.map(({ to, label, icon: Icon }) => {
           const isActive = to === '/' ? pathname === '/' : pathname.startsWith(to)
 
           return (

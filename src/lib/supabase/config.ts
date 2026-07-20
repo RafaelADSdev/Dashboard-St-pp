@@ -1,5 +1,5 @@
 /** Projeto Supabase Stüpp Dashboard */
-export const SUPABASE_PROJECT_REF = 'vhtztzilrrlbflicmeft'
+export const SUPABASE_PROJECT_REF = 'hejtayrfskmnekcykvjv'
 
 export const DEFAULT_SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`
 
