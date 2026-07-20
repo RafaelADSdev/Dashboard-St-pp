@@ -30,6 +30,10 @@ function parseFilters(searchParams: URLSearchParams): FilterParams | null {
 
 export async function GET(request: NextRequest) {
   const filters = parseFilters(request.nextUrl.searchParams)
+  const view =
+    request.nextUrl.searchParams.get('view') === 'overview'
+      ? 'overview'
+      : 'full'
 
   if (!filters) {
     return NextResponse.json(
@@ -46,7 +50,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getCachedDashboard(filters)
+    const data = await getCachedDashboard(filters, view)
     return NextResponse.json(data, {
       headers: {
         'Cache-Control': `private, max-age=${DASHBOARD_SYNC_SECONDS}, stale-while-revalidate=${DASHBOARD_SYNC_SECONDS}`,

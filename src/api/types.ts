@@ -71,24 +71,16 @@ export interface KanbanBoard {
   stages: KanbanStage[]
 }
 
-export interface ExportLeadDetail {
-  id: string
-  title: string
-  esteira: string
-  stage: string
-  corretor: string
-  diretoria: string
-  equipe: string
+export interface SourceLeadSummary {
+  source: string
+  count: number
+  roletas: { roleta: string; count: number }[]
+}
+
+export interface RoletaLeadSummary {
   roleta: string
-  origem: string
-  dateCreateIso: string
-  dateModifyIso: string
-  dateCreate: string
-  daysInPipeline: number
-  tempoNaEsteira: string
-  dateModify: string
-  daysWithoutUpdate: number
-  tempoSemAtualizar: string
+  count: number
+  sources: { source: string; count: number }[]
 }
 
 export interface LeadsDashboardData {
@@ -101,12 +93,12 @@ export interface LeadsDashboardData {
   byDiretoria: DiretoriaSummary[]
   teamDetails: TeamDetail[]
   byStage: { stage: string; count: number }[]
-  bySource: { source: string; count: number }[]
+  bySource: SourceLeadSummary[]
+  byRoleta: RoletaLeadSummary[]
   kanbanBoards: KanbanBoard[]
   funnelEconomico: { x: string; y: number }[]
   funnelGeral: { x: string; y: number }[]
   overTime: { date: string; economico: number; geral: number }[]
-  leadDetails: ExportLeadDetail[]
   diretorias: string[]
   equipes: StuppTeamOption[]
 }

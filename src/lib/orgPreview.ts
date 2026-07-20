@@ -1,5 +1,6 @@
 import { getTeamLabel, type StuppOrgStructure } from '@/api/bitrixDepartments'
 import type { StuppTeamOption } from '@/api/types'
+import { findDiretoria, getDiretoriaUserIds } from '@/lib/diretoriaScope'
 
 export interface StuppCorretorOption {
   id: string
@@ -46,11 +47,9 @@ export function resolveAssignedByIds(
   }
 
   if (filters.diretoria) {
-    const diretoria = org.diretorias.find(
-      (d) => d.id === filters.diretoria || d.name === filters.diretoria
-    )
-    if (!diretoria) return org.allUserIds
-    return [...new Set(diretoria.teams.flatMap((t) => t.userIds))]
+    const diretoria = findDiretoria(org, filters.diretoria)
+    if (!diretoria) return []
+    return getDiretoriaUserIds(diretoria)
   }
 
   return org.allUserIds

@@ -4,6 +4,7 @@ import { ROLETA_DEAL_FIELD } from './bitrixRoletas'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from './bitrixConfig'
 import {
   GERAL_ENTRADA_DATE_FIELD,
+  GERAL_NOVOS_LEADS_DATE_FIELD,
   BITRIX_DEAL_LIST_SELECT,
   buildDealDateFilterVariants,
   isDealEntryInRange,
@@ -40,6 +41,19 @@ const ROLETA_STATS_DEAL_SELECT = [
   ROLETA_DEAL_FIELD,
   GERAL_ENTRADA_DATE_FIELD,
   'DATE_CREATE',
+] as const
+
+/** Campos usados pela visão geral; exclui o conteúdo operacional do Kanban. */
+const OVERVIEW_DEAL_SELECT = [
+  'ID',
+  'ASSIGNED_BY_ID',
+  'STAGE_ID',
+  'CATEGORY_ID',
+  'DATE_CREATE',
+  'SOURCE_ID',
+  ROLETA_DEAL_FIELD,
+  GERAL_NOVOS_LEADS_DATE_FIELD,
+  GERAL_ENTRADA_DATE_FIELD,
 ] as const
 
 export interface RoletaDealSnapshot {
@@ -396,6 +410,8 @@ export async function fetchLeadsFromBitrix(
   params: DealQueryParams & {
     userToTeamName?: Record<string, string>
     userToDiretoriaName?: Record<string, string>
+    userNames?: Record<string, string>
+    summaryOnly?: boolean
     sequentialCategories?: boolean
   }
 ): Promise<BitrixLead[]> {
@@ -403,7 +419,11 @@ export async function fetchLeadsFromBitrix(
   const userToDiretoriaName = params.userToDiretoriaName ?? {}
 
   const fetchCategory = (categoryId: string) =>
-    fetchDealsWithSplit(webhookUrl, { ...params, categoryIds: [categoryId] })
+    fetchDealsWithSplit(
+      webhookUrl,
+      { ...params, categoryIds: [categoryId] },
+      params.summaryOnly ? OVERVIEW_DEAL_SELECT : DEFAULT_DEAL_LIST_SELECT
+    )
 
   const rawByCategory: BitrixDealRaw[][] = []
   for (const categoryId of params.categoryIds) {
@@ -412,18 +432,23 @@ export async function fetchLeadsFromBitrix(
   }
 
   const allDeals = dedupeDeals(rawByCategory.flat())
-  const userIds = new Set<string>()
+  const userNames = { ...(params.userNames ?? {}) }
+  const missingUserIds = new Set<string>()
 
-  for (const deal of allDeals) {
-    if (deal.ASSIGNED_BY_ID) {
-      userIds.add(String(deal.ASSIGNED_BY_ID))
+  if (!params.summaryOnly) {
+    for (const deal of allDeals) {
+      for (const rawId of [deal.ASSIGNED_BY_ID, deal.MODIFY_BY_ID]) {
+        const userId = String(rawId ?? '')
+        if (userId && !userNames[userId]) missingUserIds.add(userId)
+      }
     }
-    if (deal.MODIFY_BY_ID) {
-      userIds.add(String(deal.MODIFY_BY_ID))
-    }
+
+    Object.assign(
+      userNames,
+      await fetchUserNames(webhookUrl, [...missingUserIds])
+    )
   }
 
-  const userNames = await fetchUserNames(webhookUrl, [...userIds])
   return allDeals
     .map((deal) => normalizeDeal(deal, userNames, userToTeamName, userToDiretoriaName))
     .filter((lead) =>

@@ -13,20 +13,35 @@ import type { DiretoriaSummary } from '@/api/types'
 import { useChartTheme } from '@/hooks/useChartTheme'
 import { ChartTooltip } from './ChartTooltip'
 
-interface Props {
-  byDiretoria: DiretoriaSummary[]
+interface TeamRow {
+  equipe: string
+  leads: number
 }
 
-export function LeadsByTeamPanel({ byDiretoria }: Props) {
+interface Props {
+  byDiretoria?: DiretoriaSummary[]
+  byTeam?: TeamRow[]
+}
+
+export function LeadsByTeamPanel({ byDiretoria = [], byTeam }: Props) {
   const chart = useChartTheme()
-  const chartData = byDiretoria
-    .filter((d) => d.leads > 0)
-    .sort((a, b) => b.leads - a.leads || a.name.localeCompare(b.name, 'pt-BR'))
+  const teamMode = byTeam !== undefined
+
+  const chartData = teamMode
+    ? [...(byTeam ?? [])]
+        .filter((team) => team.leads > 0)
+        .sort((a, b) => b.leads - a.leads || a.equipe.localeCompare(b.equipe, 'pt-BR'))
+        .map((team) => ({ name: team.equipe, leads: team.leads }))
+    : byDiretoria
+        .filter((diretoria) => diretoria.leads > 0)
+        .sort((a, b) => b.leads - a.leads || a.name.localeCompare(b.name, 'pt-BR'))
 
   if (chartData.length === 0) {
     return (
       <p className="text-sm text-slate-400 dark:text-slate-500 py-12 text-center">
-        Nenhum lead no período para as diretorias.
+        {teamMode
+          ? 'Nenhum lead no período para as equipes selecionadas.'
+          : 'Nenhum lead no período para as diretorias.'}
       </p>
     )
   }
@@ -50,7 +65,7 @@ export function LeadsByTeamPanel({ byDiretoria }: Props) {
         <YAxis
           type="category"
           dataKey="name"
-          width={92}
+          width={teamMode ? 180 : 92}
           interval={0}
           tick={{ fontSize: 11, fill: chart.tickSecondary }}
           axisLine={false}

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useStuppStructurePreview } from '@/hooks/useStuppOrg'
+import { getDiretoriaUserIds } from '@/lib/diretoriaScope'
 import { useFilterStore } from '@/store/filterStore'
 import { filterLabelClass, filterSelectClass } from '@/components/ui/styles'
 
@@ -26,7 +27,7 @@ export function CorretorFilter({ label = 'Corretor' }: Props) {
     if (diretoria) {
       const diretoriaItem = org.diretorias.find((d) => d.id === diretoria)
       if (!diretoriaItem) return []
-      const ids = new Set(diretoriaItem.teams.flatMap((t) => t.userIds))
+      const ids = new Set(getDiretoriaUserIds(diretoriaItem))
       return all.filter((item) => ids.has(item.id))
     }
 

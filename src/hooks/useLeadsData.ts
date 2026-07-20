@@ -16,7 +16,12 @@ async function parseApiError(res: Response, fallback: string): Promise<string> {
   return body.error ?? fallback
 }
 
-async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData> {
+type DashboardDataView = 'full' | 'overview'
+
+async function fetchDashboard(
+  filters: FilterParams,
+  view: DashboardDataView
+): Promise<LeadsDashboardData> {
   const params = new URLSearchParams({
     dateFrom: filters.dateFrom,
     dateTo: filters.dateTo,
@@ -25,6 +30,7 @@ async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData
     equipe: filters.equipe,
     roleta: filters.roleta,
     corretor: filters.corretor,
+    view,
   })
 
   const controller = new AbortController()
@@ -54,14 +60,15 @@ async function fetchDashboard(filters: FilterParams): Promise<LeadsDashboardData
 
 export function useLeadsData(
   filters: FilterParams | null,
-  overrides?: Partial<FilterParams>
+  overrides?: Partial<FilterParams>,
+  view: DashboardDataView = 'full'
 ) {
   const merged = filters ? { ...filters, ...overrides } : null
 
   return useQuery({
-    queryKey: ['leads', merged],
+    queryKey: ['leads', view, merged],
     enabled: Boolean(merged?.dateFrom && merged?.dateTo),
-    queryFn: () => fetchDashboard(merged!),
+    queryFn: () => fetchDashboard(merged!, view),
     placeholderData: keepPreviousData,
     staleTime: DASHBOARD_SYNC_MS,
     refetchInterval: (query) =>

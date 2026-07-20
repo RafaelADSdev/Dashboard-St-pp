@@ -1,5 +1,5 @@
 import type { StuppOrgStructure } from '@/api/bitrixDepartments'
-import type { StuppRoleta } from '@/api/bitrixRoletas'
+import { isRoletaFilterActiveOnly, type StuppRoleta } from '@/api/bitrixRoletas'
 import { resolveAssignedByIds } from '@/lib/orgPreview'
 import { isKanbanActiveRoleta } from '@/lib/roletaStatus'
 import type { FilterParams, RoletaMembershipSummary } from '@/api/types'
@@ -18,7 +18,7 @@ export function countCorretoresAtivosRoleta(
 ): number {
   const { stuppUserIds, filters, org } = options
   const hasOrgFilter = Boolean(filters?.diretoria || filters?.equipe || filters?.corretor)
-  const hasRoletaFilter = Boolean(filters?.roleta)
+  const hasRoletaFilter = Boolean(filters?.roleta) && !isRoletaFilterActiveOnly(filters?.roleta ?? '')
 
   const allowedUserIds =
     hasOrgFilter && org && filters

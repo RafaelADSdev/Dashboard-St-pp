@@ -1,10 +1,12 @@
 import { fetchLeadsFromBitrix } from '@/api/bitrix'
-import { resolveRoletaTitle } from '@/api/bitrixRoletas'
+import { isRoletaFilterActiveOnly, resolveRoletaTitle } from '@/api/bitrixRoletas'
 import { getCategoryIdsForEsteira } from '@/api/bitrixConfig'
 import type { FilterParams, LeadsDashboardData } from '@/api/types'
 import { getEquipeOptions, resolveAssignedByIds } from '@/lib/orgPreview'
+import { getRoletaTitleKeysForDiretoria } from '@/lib/diretoriaScope'
 import { aggregateLeadsData } from '@/utils/aggregateLeads'
 import { countCorretoresAtivosRoleta } from '@/utils/countCorretoresAtivosRoleta'
+import { filterLeadsByActiveRoletas } from '@/utils/filterRoletaLeads'
 import { getDealsBitrixWebhookCandidates, hasSplitBitrixWebhooks } from './bitrixWebhook'
 import {
   getCachedOrgStructure,
@@ -13,6 +15,8 @@ import {
   getCachedStageCatalog,
   getCachedStuppRoletasCatalog,
 } from './cachedBitrix'
+
+export type DashboardDataView = 'full' | 'overview'
 
 async function loadDashboardMetadata() {
   const org = await getCachedOrgStructure()
@@ -32,7 +36,10 @@ async function loadDashboardMetadata() {
   }
 }
 
-export async function buildDashboardData(filters: FilterParams): Promise<LeadsDashboardData> {
+export async function buildDashboardData(
+  filters: FilterParams,
+  view: DashboardDataView = 'full'
+): Promise<LeadsDashboardData> {
   const dealsWebhooks = getDealsBitrixWebhookCandidates()
   const categoryIds = getCategoryIdsForEsteira(filters.esteira)
   const sequentialCategories = !hasSplitBitrixWebhooks()
@@ -47,8 +54,9 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
     corretor: filters.corretor,
   })
   const hasUserFilter = Boolean(filters.equipe || filters.diretoria || filters.corretor)
+  const somenteRoletasAtivas = isRoletaFilterActiveOnly(filters.roleta)
   const roletaTitle = resolveRoletaTitle(roletas, filters.roleta)
-  const hasRoletaFilter = Boolean(filters.roleta)
+  const hasRoletaFilter = Boolean(filters.roleta) && !somenteRoletasAtivas
   const corretoresAtivosRoleta = countCorretoresAtivosRoleta(
     roletasCatalog,
     roletaMembership.membershipByRoletaId,
@@ -66,7 +74,16 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
 
   if ((hasUserFilter && assignedByIds.length === 0) || (hasRoletaFilter && !roletaTitle)) {
     return {
-      ...aggregateLeadsData([], filters, stageCatalog, org, equipeOptions, sourceLabels),
+      ...aggregateLeadsData(
+        [],
+        filters,
+        stageCatalog,
+        org,
+        equipeOptions,
+        sourceLabels,
+        undefined,
+        { includeOperationalDetails: view === 'full' }
+      ),
       corretoresAtivosRoleta,
     }
   }
@@ -79,17 +96,34 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
     roletaTitle,
     userToTeamName: org.userToTeamName,
     userToDiretoriaName: org.userToDiretoriaName,
+    userNames: org.userToName,
+    summaryOnly: view === 'overview',
     sequentialCategories,
   })
 
+  const scopedLeads = somenteRoletasAtivas
+    ? filterLeadsByActiveRoletas(bitrixLeads, roletasCatalog)
+    : bitrixLeads
+
+  const allowedRoletaTitleKeys = filters.diretoria
+    ? getRoletaTitleKeysForDiretoria(
+        roletasCatalog,
+        roletaMembership.membershipByRoletaId,
+        org,
+        filters.diretoria
+      )
+    : undefined
+
   return {
     ...aggregateLeadsData(
-      bitrixLeads,
+      scopedLeads,
       filters,
       stageCatalog,
       org,
       equipeOptions,
-      sourceLabels
+      sourceLabels,
+      allowedRoletaTitleKeys,
+      { includeOperationalDetails: view === 'full' }
     ),
     corretoresAtivosRoleta,
   }

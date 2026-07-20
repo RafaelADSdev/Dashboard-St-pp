@@ -19,13 +19,18 @@ import type {
   DiretoriaSummary,
   FilterParams,
   LeadsDashboardData,
+  RoletaLeadSummary,
+  SourceLeadSummary,
   StuppTeamOption,
   TeamDetail,
 } from '@/api/types'
 import type { StuppOrgStructure } from '@/api/bitrixDepartments'
 import { getTeamLabel } from '@/api/bitrixDepartments'
+import { isStuppRoletaTitle } from '@/api/bitrixRoletas'
+import { findDiretoria } from '@/lib/diretoriaScope'
+import { resolveAssignedByIds } from '@/lib/orgPreview'
+import { normalizeRoletaTitleKey } from '@/utils/filterRoletaLeads'
 import { buildKanbanBoards } from '@/utils/buildKanbanBoards'
-import { buildLeadExportDetails } from '@/utils/buildLeadExportDetails'
 
 export function aggregateLeadsData(
   bitrixLeads: BitrixLead[],
@@ -33,23 +38,23 @@ export function aggregateLeadsData(
   stageCatalog: StageCatalog,
   org: StuppOrgStructure,
   equipeOptions: StuppTeamOption[],
-  sourceLabels: Record<string, string> = {}
+  sourceLabels: Record<string, string> = {},
+  allowedRoletaTitleKeys?: Set<string>,
+  options: { includeOperationalDetails?: boolean } = {}
 ): LeadsDashboardData {
+  const includeOperationalDetails = options.includeOperationalDetails ?? true
   const { labels, geral: geralStages, economico: economicoStages } = stageCatalog
 
   const allowedUserIds = new Set(
-    filters.corretor
-      ? org.allUserIds.includes(filters.corretor)
-        ? [filters.corretor]
-        : []
-      : filters.equipe
-        ? (org.diretorias.flatMap((d) => d.teams).find((t) => t.id === filters.equipe)?.userIds ?? [])
-        : filters.diretoria
-          ? (org.diretorias
-              .find((d) => d.id === filters.diretoria || d.name === filters.diretoria)
-              ?.teams.flatMap((t) => t.userIds) ?? org.allUserIds)
-          : org.allUserIds
+    resolveAssignedByIds(org, {
+      diretoria: filters.diretoria,
+      equipe: filters.equipe,
+      corretor: filters.corretor,
+    })
   )
+
+  const selectedDiretoria = filters.diretoria ? findDiretoria(org, filters.diretoria) : undefined
+  const scopedDiretorias = selectedDiretoria ? [selectedDiretoria] : org.diretorias
 
   const filtered = bitrixLeads.filter((lead) => allowedUserIds.has(lead.assigned_by_id))
 
@@ -59,15 +64,19 @@ export function aggregateLeadsData(
     )
   )
 
-  const byTeam = groupBy(
-    filtered.map((lead) => ({
-      ...lead,
-      equipe:
-        teamLabels.get(org.userToTeamId[lead.assigned_by_id] ?? '') ??
-        lead.equipe,
-    })),
-    'equipe'
-  )
+  const assignedLeadCounts = new Map<string, number>()
+  const teamLeadCounts = new Map<string, number>()
+  for (const lead of filtered) {
+    assignedLeadCounts.set(
+      lead.assigned_by_id,
+      (assignedLeadCounts.get(lead.assigned_by_id) ?? 0) + 1
+    )
+
+    const teamLabel =
+      teamLabels.get(org.userToTeamId[lead.assigned_by_id] ?? '') ??
+      lead.equipe
+    teamLeadCounts.set(teamLabel, (teamLeadCounts.get(teamLabel) ?? 0) + 1)
+  }
   const funnelEconomico = filtered.filter((l) => isEconomicoCategory(l.category_id))
   const funnelGeral = filtered.filter((l) => isGeralCategory(l.category_id))
 
@@ -121,33 +130,45 @@ export function aggregateLeadsData(
         ? economicoPerdidos
         : economicoPerdidos + geralPerdidos
 
-  const byDiretoriaFromLeads: DiretoriaSummary[] = org.diretorias.map((diretoria) => {
+  const byDiretoriaFromLeads: DiretoriaSummary[] = scopedDiretorias.map((diretoria) => {
     const userIds = new Set(diretoria.teams.flatMap((t) => t.userIds))
-    const leads = filtered.filter((l) => userIds.has(l.assigned_by_id)).length
+    if (diretoria.leaderId) userIds.add(diretoria.leaderId)
+    const leads = [...userIds].reduce(
+      (total, userId) => total + (assignedLeadCounts.get(userId) ?? 0),
+      0
+    )
     return { id: diretoria.id, name: diretoria.name, leads }
   })
 
-  const byTeamFromLeads = Object.entries(byTeam).map(([equipe, items]) => ({
-    equipe,
-    leads: items.length,
-  }))
+  const teamDetails: TeamDetail[] = includeOperationalDetails
+    ? scopedDiretorias.flatMap((diretoria) =>
+        diretoria.teams.map((team) => {
+          const teamUserIds = new Set(team.userIds)
+          const teamLeads = filtered.filter((lead) => teamUserIds.has(lead.assigned_by_id))
+          const byStageForTeam = buildByStageForFilter(teamLeads, filters.esteira, stageCatalog)
 
-  const teamDetails: TeamDetail[] = org.diretorias.flatMap((diretoria) =>
-    diretoria.teams.map((team) => {
-      const teamLeads = filtered.filter((l) => team.userIds.includes(l.assigned_by_id))
-      const byStageForTeam = buildByStageForFilter(teamLeads, filters.esteira, stageCatalog)
+          return {
+            id: team.id,
+            label: getTeamLabel(team),
+            diretoria: diretoria.name,
+            leaderName: team.leaderName,
+            leads: teamLeads.length,
+            byStage: byStageForTeam,
+            overTime: groupByDate(teamLeads),
+          }
+        })
+      )
+    : []
 
-      return {
-        id: team.id,
-        label: getTeamLabel(team),
-        diretoria: diretoria.name,
-        leaderName: team.leaderName,
-        leads: teamLeads.length,
-        byStage: byStageForTeam,
-        overTime: groupByDate(teamLeads),
-      }
-    })
-  )
+  const byTeamFromLeads = selectedDiretoria
+    ? selectedDiretoria.teams.map((team) => ({
+        equipe: getTeamLabel(team),
+        leads: team.userIds.reduce(
+          (total, userId) => total + (assignedLeadCounts.get(userId) ?? 0),
+          0
+        ),
+      }))
+    : [...teamLeadCounts.entries()].map(([equipe, leads]) => ({ equipe, leads }))
 
   return {
     totalLeads,
@@ -158,15 +179,23 @@ export function aggregateLeadsData(
     byTeam: byTeamFromLeads,
     byDiretoria: byDiretoriaFromLeads,
     teamDetails,
-    byStage: buildByStageForFilter(filtered, filters.esteira, stageCatalog),
-    bySource: groupBySource(filtered, sourceLabels),
-    kanbanBoards: buildKanbanBoards(filtered, filters.esteira, stageCatalog, sourceLabels),
+    byStage: includeOperationalDetails
+      ? buildByStageForFilter(filtered, filters.esteira, stageCatalog)
+      : [],
+    bySource: groupBySourceWithRoleta(filtered, sourceLabels, allowedRoletaTitleKeys),
+    byRoleta: groupByRoleta(filtered, sourceLabels, allowedRoletaTitleKeys),
+    kanbanBoards: includeOperationalDetails
+      ? buildKanbanBoards(filtered, filters.esteira, stageCatalog, sourceLabels)
+      : [],
     funnelEconomico: funnelEconomicoData,
     funnelGeral: funnelGeralData,
     overTime: groupByDate(filtered),
-    leadDetails: buildLeadExportDetails(filtered, stageCatalog, sourceLabels),
-    diretorias: org.diretorias.map((d) => d.name),
-    equipes: equipeOptions,
+    diretorias: includeOperationalDetails ? scopedDiretorias.map((d) => d.name) : [],
+    equipes: includeOperationalDetails
+      ? selectedDiretoria
+        ? equipeOptions.filter((equipe) => equipe.diretoria === selectedDiretoria.name)
+        : equipeOptions
+      : [],
   }
 }
 
@@ -209,34 +238,89 @@ function buildByStageForFilter(
   return [...geral, ...economico]
 }
 
-function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
-  return arr.reduce(
-    (acc, item) => {
-      const k = String(item[key] ?? 'Sem valor')
-      acc[k] = [...(acc[k] ?? []), item]
-      return acc
-    },
-    {} as Record<string, T[]>
-  )
+function resolveSourceLabel(sourceId: string, sourceLabels: Record<string, string>): string {
+  if (!sourceId) return 'Sem origem'
+  return sourceLabels[sourceId] ?? sourceId
 }
 
-function groupBySource(
+function groupBySourceWithRoleta(
   leads: BitrixLead[],
-  sourceLabels: Record<string, string>
-): { source: string; count: number }[] {
-  const counts: Record<string, number> = {}
+  sourceLabels: Record<string, string>,
+  allowedRoletaTitleKeys?: Set<string>
+): SourceLeadSummary[] {
+  const bySource = new Map<string, { total: number; roletas: Map<string, number> }>()
 
   for (const lead of leads) {
-    const key = lead.source_id || '__empty__'
-    counts[key] = (counts[key] ?? 0) + 1
+    const sourceName = resolveSourceLabel(lead.source_id, sourceLabels)
+    const roletaName = lead.roleta?.trim() || ''
+
+    const entry = bySource.get(sourceName) ?? { total: 0, roletas: new Map<string, number>() }
+    entry.total += 1
+
+    if (roletaName && isStuppRoletaTitle(roletaName)) {
+      if (
+        !allowedRoletaTitleKeys ||
+        allowedRoletaTitleKeys.has(normalizeRoletaTitleKey(roletaName))
+      ) {
+        entry.roletas.set(roletaName, (entry.roletas.get(roletaName) ?? 0) + 1)
+      }
+    }
+
+    bySource.set(sourceName, entry)
   }
 
-  return Object.entries(counts)
-    .map(([id, count]) => ({
-      source: id === '__empty__' ? 'Sem origem' : (sourceLabels[id] ?? id),
-      count,
-    }))
-    .sort((a, b) => b.count - a.count)
+  return [...bySource.entries()]
+    .map(([source, { total, roletas }]) => {
+      const roletaList = [...roletas.entries()]
+        .map(([roleta, count]) => ({ roleta, count }))
+        .sort((a, b) => b.count - a.count || a.roleta.localeCompare(b.roleta, 'pt-BR'))
+
+      return {
+        source,
+        count: total,
+        roletas: roletaList,
+      }
+    })
+    .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source, 'pt-BR'))
+}
+
+function groupByRoleta(
+  leads: BitrixLead[],
+  sourceLabels: Record<string, string>,
+  allowedRoletaTitleKeys?: Set<string>
+): RoletaLeadSummary[] {
+  const byRoleta = new Map<string, Map<string, number>>()
+
+  for (const lead of leads) {
+    const roletaName = lead.roleta?.trim() || ''
+    if (!roletaName || !isStuppRoletaTitle(roletaName)) continue
+    if (
+      allowedRoletaTitleKeys &&
+      !allowedRoletaTitleKeys.has(normalizeRoletaTitleKey(roletaName))
+    ) {
+      continue
+    }
+
+    const sourceName = resolveSourceLabel(lead.source_id, sourceLabels)
+
+    const sourceCounts = byRoleta.get(roletaName) ?? new Map<string, number>()
+    sourceCounts.set(sourceName, (sourceCounts.get(sourceName) ?? 0) + 1)
+    byRoleta.set(roletaName, sourceCounts)
+  }
+
+  return [...byRoleta.entries()]
+    .map(([roleta, sources]) => {
+      const sourceList = [...sources.entries()]
+        .map(([source, count]) => ({ source, count }))
+        .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source, 'pt-BR'))
+
+      return {
+        roleta,
+        count: sourceList.reduce((sum, item) => sum + item.count, 0),
+        sources: sourceList,
+      }
+    })
+    .sort((a, b) => b.count - a.count || a.roleta.localeCompare(b.roleta, 'pt-BR'))
 }
 
 function parseEntryDate(value: string): Date | null {

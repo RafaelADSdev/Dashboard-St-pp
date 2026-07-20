@@ -287,10 +287,17 @@ async function fetchLegacyActiveRoletas(webhookUrl: BitrixWebhookRef): Promise<S
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
 }
 
+export const ROLETA_FILTER_ACTIVE_ONLY = '__ATIVAS__'
+export const ROLETA_FILTER_ACTIVE_ONLY_LABEL = 'Somente roletas ativas'
+
+export function isRoletaFilterActiveOnly(roletaId: string): boolean {
+  return roletaId === ROLETA_FILTER_ACTIVE_ONLY
+}
+
 export function resolveRoletaTitle(
   roletas: StuppRoleta[],
   roletaId: string
 ): string | undefined {
-  if (!roletaId) return undefined
+  if (!roletaId || isRoletaFilterActiveOnly(roletaId)) return undefined
   return roletas.find((roleta) => roleta.id === roletaId)?.title
 }

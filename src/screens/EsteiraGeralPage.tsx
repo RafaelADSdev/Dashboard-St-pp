@@ -75,8 +75,14 @@ export function EsteiraGeralPage() {
                   </ChartCard>
                 </div>
 
-                <ChartCard title="Leads por origem" description="Fonte de captação no CRM">
-                  <LeadsBySourceChart data={data?.bySource ?? []} />
+                <ChartCard
+                  title="Leads por origem e roleta"
+                  description="Veja de qual fonte veio o lead e em qual roleta ele entrou no período"
+                >
+                  <LeadsBySourceChart
+                    bySource={data?.bySource ?? []}
+                    byRoleta={data?.byRoleta ?? []}
+                  />
                 </ChartCard>
               </div>
             </FilterApplyingOverlay>

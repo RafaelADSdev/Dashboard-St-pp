@@ -7,7 +7,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import { useFilterStore } from '@/store/filterStore'
 import { useLayoutUiStore } from '@/store/layoutUiStore'
-import { ExportButton } from './ExportButton'
 
 function useFilterIndicators(ignoreEsteira = false) {
   const applied = useFilterStore((s) => s.applied)
@@ -62,7 +61,6 @@ export function Header() {
             <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand-600 ring-2 ring-[#f5f5f5] dark:ring-indigo" />
           )}
         </button>
-        <ExportButton />
         <button
           type="button"
           onClick={handleRefresh}

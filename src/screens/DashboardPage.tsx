@@ -36,8 +36,13 @@ function DashboardFilters() {
 
 export function DashboardPage() {
   const applied = useAppliedFilters()
-  const { data, isFetching, isPending, isError, error } = useLeadsData(applied)
+  const { data, isFetching, isPending, isError, error } = useLeadsData(
+    applied,
+    undefined,
+    'overview'
+  )
   const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
+  const diretoriaSelected = Boolean(applied?.diretoria)
 
   return (
     <>
@@ -75,8 +80,18 @@ export function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                  <ChartCard title="Leads por diretoria" description="Volume por diretoria no período">
-                    <LeadsByTeamPanel byDiretoria={data?.byDiretoria ?? []} />
+                  <ChartCard
+                    title={diretoriaSelected ? 'Leads por equipe' : 'Leads por diretoria'}
+                    description={
+                      diretoriaSelected
+                        ? 'Volume por equipe da diretoria selecionada no período'
+                        : 'Volume por diretoria no período'
+                    }
+                  >
+                    <LeadsByTeamPanel
+                      byDiretoria={diretoriaSelected ? undefined : data?.byDiretoria}
+                      byTeam={diretoriaSelected ? data?.byTeam : undefined}
+                    />
                   </ChartCard>
                   <ChartCard title="Evolução no período" description="Comparativo diário entre esteiras">
                     <LeadsOverTimeChart data={data?.overTime ?? []} />
@@ -92,8 +107,14 @@ export function DashboardPage() {
                   </ChartCard>
                 </div>
 
-                <ChartCard title="Leads por origem" description="Fonte de captação no CRM">
-                  <LeadsBySourceChart data={data?.bySource ?? []} />
+                <ChartCard
+                  title="Leads por origem e roleta"
+                  description="Veja de qual fonte veio o lead e em qual roleta ele entrou no período"
+                >
+                  <LeadsBySourceChart
+                    bySource={data?.bySource ?? []}
+                    byRoleta={data?.byRoleta ?? []}
+                  />
                 </ChartCard>
               </div>
             </FilterApplyingOverlay>
