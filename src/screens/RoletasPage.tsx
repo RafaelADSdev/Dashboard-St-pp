@@ -32,6 +32,7 @@ import { CircleDot, PauseCircle, Sparkles } from 'lucide-react'
 import {
   filterRoletas,
   groupRoletasByStatus,
+  scopeRoletasCorretores,
 } from '@/utils/filterRoletas'
 import { formatLiderancaFilterLabel } from '@/api/bitrixRoletaCorretores'
 import { useStuppStructurePreview } from '@/hooks/useStuppOrg'
@@ -79,8 +80,11 @@ export function RoletasPage() {
   )
 
   const data = useMemo(
-    () => mergeRoletasPageData(catalog?.roletas, stats),
-    [catalog?.roletas, stats]
+    () =>
+      mergeRoletasPageData(catalog?.roletas, stats, {
+        activeStuppUserIds: new Set(orgPreview?.org.allUserIds ?? []),
+      }),
+    [catalog?.roletas, stats, orgPreview?.org.allUserIds]
   )
 
   const selectedLiderancaTeam = useMemo((): LiderancaTeamFilter | undefined => {
@@ -151,7 +155,7 @@ export function RoletasPage() {
   }, [data?.roletas, orgPreview?.corretores, orgPreview?.org.allUserIds])
 
   const roletasByOrg = useMemo(() => {
-    return filterRoletas(
+    const matched = filterRoletas(
       data?.roletas ?? [],
       {
         diretoriaId: appliedCatalogFilters.diretoriaId,
@@ -159,6 +163,16 @@ export function RoletasPage() {
         corretorId: appliedCatalogFilters.corretorId,
         roletaId: '',
         status: 'todas',
+      },
+      { liderancaTeam: selectedLiderancaTeam }
+    )
+
+    return scopeRoletasCorretores(
+      matched,
+      {
+        diretoriaId: appliedCatalogFilters.diretoriaId,
+        liderancaId: appliedCatalogFilters.liderancaId,
+        corretorId: appliedCatalogFilters.corretorId,
       },
       { liderancaTeam: selectedLiderancaTeam }
     )

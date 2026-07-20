@@ -20,10 +20,12 @@ import {
   requiresDiretoria,
   requiresEquipe,
 } from '@/lib/accessScope'
-import type { CreateAccessPayload, UserEsteira, UserPermission, UserProfile, UserVisao } from '@/types/access'
-import { ESTEIRA_OPTIONS, PERMISSION_OPTIONS, PERMISSION_LABELS, VISAO_OPTIONS } from '@/types/access'
+import type { CreateAccessPayload, UserEsteira, UserPermission, UserProfile, UserViewSection, UserVisao } from '@/types/access'
+import { ALL_VIEW_SECTIONS, ESTEIRA_OPTIONS, PERMISSION_OPTIONS, PERMISSION_LABELS, VIEW_SECTION_LABELS, VISAO_OPTIONS } from '@/types/access'
 import { formatPermissionsSummary } from '@/lib/userPermissions'
+import { formatViewSectionsSummary } from '@/lib/viewSections'
 import { EditAccessModal } from '@/components/acessos/EditAccessModal'
+import { ViewSectionsField } from '@/components/acessos/ViewSectionsField'
 
 const fieldLabelClass =
   'mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500'
@@ -98,6 +100,7 @@ export function AccessManagementPage() {
   const [diretoriaIds, setDiretoriaIds] = useState<string[]>([])
   const [equipeId, setEquipeId] = useState('')
   const [permissions, setPermissions] = useState<UserPermission[]>([])
+  const [viewSections, setViewSections] = useState<UserViewSection[]>(ALL_VIEW_SECTIONS)
   const [profiles, setProfiles] = useState<UserProfile[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -117,6 +120,7 @@ export function AccessManagementPage() {
     setEquipeId('')
     if (visao === 'admin') {
       setPermissions([])
+      setViewSections(ALL_VIEW_SECTIONS)
     }
   }, [visao])
 
@@ -207,6 +211,12 @@ export function AccessManagementPage() {
     setError('')
     setSuccess('')
 
+    if (visao !== 'admin' && viewSections.length === 0) {
+      setError('Selecione ao menos uma área visível para o usuário.')
+      setSubmitting(false)
+      return
+    }
+
     const payload: CreateAccessPayload = {
       username,
       password,
@@ -219,6 +229,7 @@ export function AccessManagementPage() {
           : [],
       equipeId: requiresEquipe(visao) ? equipeId : null,
       permissions: visao === 'admin' ? [] : permissions,
+      viewSections: visao === 'admin' ? [] : viewSections,
     }
 
     try {
@@ -242,6 +253,7 @@ export function AccessManagementPage() {
       setDiretoriaIds([])
       setEquipeId('')
       setPermissions([])
+      setViewSections(ALL_VIEW_SECTIONS)
       await loadProfiles()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível criar o acesso.')
@@ -500,6 +512,13 @@ export function AccessManagementPage() {
             </div>
           ) : null}
 
+          <ViewSectionsField
+            value={viewSections}
+            onChange={setViewSections}
+            disabled={submitting}
+            isAdmin={visao === 'admin'}
+          />
+
           <div>
             <p className={fieldLabelClass}>Poderes do usuário</p>
             {visao === 'admin' ? (
@@ -590,6 +609,7 @@ export function AccessManagementPage() {
                   <th className="px-3 py-3 font-semibold">Visão</th>
                   <th className="px-3 py-3 font-semibold">Esteira</th>
                   <th className="px-3 py-3 font-semibold">Escopo</th>
+                  <th className="px-3 py-3 font-semibold">Áreas visíveis</th>
                   <th className="px-3 py-3 font-semibold">Poderes</th>
                   <th className="px-3 py-3 font-semibold" />
                 </tr>
@@ -610,6 +630,9 @@ export function AccessManagementPage() {
                     </td>
                     <td className="px-3 py-3 text-slate-600 dark:text-slate-300">
                       {formatProfileScope(item)}
+                    </td>
+                    <td className="px-3 py-3 text-slate-600 dark:text-slate-300">
+                      {formatViewSectionsSummary(item, VIEW_SECTION_LABELS)}
                     </td>
                     <td className="px-3 py-3 text-slate-600 dark:text-slate-300">
                       {formatPermissionsSummary(item, PERMISSION_LABELS)}

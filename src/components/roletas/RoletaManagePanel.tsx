@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Loader2, Plus, Search, UserMinus, UserRound } from 'lucide-react'
-import type { RoletaCorretorMember, RoletaStat } from '@/api/types'
+import type { RoletaStat } from '@/api/types'
 import type { StuppCorretorOption } from '@/lib/orgPreview'
 import {
   ROLETA_STATUS_LABELS,
@@ -12,45 +12,21 @@ import {
 } from '@/lib/roletaStatus'
 import { useRoletaMutations } from '@/hooks/useRoletaMutations'
 import { useUserPermissions } from '@/hooks/useUserPermissions'
-import {
-  corretorMatchesLiderancaTeam,
-  type LiderancaTeamFilter,
-} from '@/utils/roletaOrgFilter'
-import type { RoletasFilterState } from '@/utils/filterRoletas'
 import { groupCorretoresByLideranca } from '@/utils/groupCorretoresByLideranca'
 import { formatNumber } from '@/utils/formatters'
 import { RoletaStatusBadge } from './RoletaStatusBadge'
+import { roletaOperationalStatusStyles, roletaStatusDotStyles } from './roletaStatusButtonStyles'
 import { filterInputClass } from '@/components/ui/styles'
 
 interface Props {
   roleta: RoletaStat
   corretorOptions: StuppCorretorOption[]
-  filters: RoletasFilterState
-  liderancaTeam?: LiderancaTeamFilter
   statsLoading?: boolean
-}
-
-function isCorretorHighlighted(
-  corretor: RoletaCorretorMember,
-  filters: RoletasFilterState,
-  liderancaTeam?: LiderancaTeamFilter
-) {
-  if (filters.diretoriaId && corretor.diretoriaId !== filters.diretoriaId) return false
-  if (filters.liderancaId) {
-    const team =
-      liderancaTeam ??
-      ({ id: filters.liderancaId, userIds: [] } satisfies LiderancaTeamFilter)
-    if (!corretorMatchesLiderancaTeam(corretor, team)) return false
-  }
-  if (filters.corretorId && corretor.corretorUserId !== filters.corretorId) return false
-  return Boolean(filters.diretoriaId || filters.liderancaId || filters.corretorId)
 }
 
 export function RoletaManagePanel({
   roleta,
   corretorOptions,
-  filters,
-  liderancaTeam,
   statsLoading,
 }: Props) {
   const { updateStatus, addCorretor, removeCorretor } = useRoletaMutations()
@@ -141,24 +117,27 @@ export function RoletaManagePanel({
         </p>
         {canManageRoletaStatus ? (
         <div className="flex flex-wrap gap-2">
-          {ROLETA_STATUS_ORDER.map((status) => (
-            <button
-              key={status}
-              type="button"
-              disabled={isUpdatingStatus}
-              onClick={() => handleStatusChange(status)}
-              className={clsx(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition',
-                roleta.status === status
-                  ? 'ring-2 ring-brand-400 ring-offset-1 dark:ring-offset-slate-900'
-                  : 'opacity-80 hover:opacity-100',
-                isUpdatingStatus && 'cursor-wait opacity-60'
-              )}
-            >
-              <RoletaStatusBadge status={status} showDot={false} />
-              {ROLETA_STATUS_LABELS[status]}
-            </button>
-          ))}
+          {ROLETA_STATUS_ORDER.map((status) => {
+            const selected = roleta.status === status
+            const styles = roletaOperationalStatusStyles[status]
+
+            return (
+              <button
+                key={status}
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={() => handleStatusChange(status)}
+                className={clsx(
+                  'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                  selected ? styles.button.selected : styles.button.unselected,
+                  isUpdatingStatus && 'cursor-wait opacity-60'
+                )}
+              >
+                <span className={clsx('h-1.5 w-1.5 rounded-full', roletaStatusDotStyles[status])} />
+                {ROLETA_STATUS_LABELS[status]}
+              </button>
+            )
+          })}
           {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
         </div>
         ) : (
@@ -197,12 +176,7 @@ export function RoletaManagePanel({
                     .map((corretor) => (
                     <span
                       key={corretor.recordId}
-                      className={clsx(
-                        'inline-flex items-center gap-1 rounded-full py-1 pl-2.5 pr-1 text-xs',
-                        isCorretorHighlighted(corretor, filters, liderancaTeam)
-                          ? 'bg-brand-50 font-medium text-brand-800 ring-1 ring-brand-200 dark:bg-brand-500/10 dark:text-brand-200 dark:ring-brand-500/30'
-                          : 'bg-slate-100 text-slate-700 dark:bg-slate-700/70 dark:text-slate-200'
-                      )}
+                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2.5 pr-1 text-xs text-slate-700 dark:bg-slate-700/70 dark:text-slate-200"
                     >
                       <UserRound className="h-3 w-3 shrink-0 opacity-70" />
                       <span>

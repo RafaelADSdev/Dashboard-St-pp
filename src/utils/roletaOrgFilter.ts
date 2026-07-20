@@ -6,6 +6,44 @@ export interface LiderancaTeamFilter {
   userIds: string[]
 }
 
+export interface RoletasOrgFilterState {
+  diretoriaId: string
+  liderancaId: string
+  corretorId: string
+}
+
+export function hasRoletasOrgFilter(filters: RoletasOrgFilterState): boolean {
+  return Boolean(filters.diretoriaId || filters.liderancaId || filters.corretorId)
+}
+
+export function corretorMatchesRoletasOrgFilters(
+  corretor: RoletaCorretorMember,
+  filters: RoletasOrgFilterState,
+  options?: { liderancaTeam?: LiderancaTeamFilter }
+): boolean {
+  if (!hasRoletasOrgFilter(filters)) return true
+
+  if (filters.corretorId && corretor.corretorUserId !== filters.corretorId) {
+    return false
+  }
+
+  if (filters.liderancaId) {
+    const team =
+      options?.liderancaTeam ??
+      ({ id: filters.liderancaId, userIds: [] } satisfies LiderancaTeamFilter)
+
+    if (!corretorMatchesLiderancaTeam(corretor, team)) {
+      return false
+    }
+  }
+
+  if (filters.diretoriaId && corretor.diretoriaId !== filters.diretoriaId) {
+    return false
+  }
+
+  return true
+}
+
 export function corretorMatchesLiderancaTeam(
   corretor: RoletaCorretorMember,
   team: LiderancaTeamFilter

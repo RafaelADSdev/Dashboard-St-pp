@@ -8,12 +8,14 @@ import { StuppLogo } from '@/components/brand/StuppLogo'
 import { HubOnLogo } from '@/components/brand/HubOnLogo'
 import { useLayoutUiStore } from '@/store/layoutUiStore'
 import { useCurrentProfile } from '@/hooks/useCurrentProfile'
+import { canViewSection } from '@/lib/viewSections'
+import type { UserViewSection } from '@/types/access'
 
-const navItems = [
-  { to: '/', label: 'Visão geral', icon: LayoutDashboard },
-  { to: '/esteira-economico', label: 'Comercial Econômico', icon: TrendingUp },
-  { to: '/esteira-geral', label: 'Comercial Geral', icon: Building2 },
-  { to: '/roletas', label: 'Roletas', icon: CircleDot },
+const navItems: { to: string; label: string; icon: typeof LayoutDashboard; section: UserViewSection }[] = [
+  { to: '/', label: 'Visão geral', icon: LayoutDashboard, section: 'visao_geral' },
+  { to: '/esteira-economico', label: 'Comercial Econômico', icon: TrendingUp, section: 'esteira_economico' },
+  { to: '/esteira-geral', label: 'Comercial Geral', icon: Building2, section: 'esteira_geral' },
+  { to: '/roletas', label: 'Roletas', icon: CircleDot, section: 'roletas' },
 ]
 
 const adminNavItems = [{ to: '/acessos', label: 'Gestão de acesso', icon: Shield }]
@@ -24,7 +26,10 @@ export function Sidebar() {
   const toggleSidebar = useLayoutUiStore((s) => s.toggleSidebar)
   const { data: profile } = useCurrentProfile()
 
-  const items = profile?.isAdmin ? [...navItems, ...adminNavItems] : navItems
+  const items = [
+    ...navItems.filter((item) => canViewSection(profile, item.section)),
+    ...(profile?.isAdmin ? adminNavItems : []),
+  ]
 
   return (
     <aside

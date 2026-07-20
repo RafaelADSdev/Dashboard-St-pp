@@ -2,10 +2,13 @@ import type { RoletaStat } from '@/api/types'
 import type { RoletaOperationalStatus } from '@/lib/roletaStatus'
 import { ROLETA_STATUS_ORDER } from '@/lib/roletaStatus'
 import {
+  corretorMatchesRoletasOrgFilters,
+  hasRoletasOrgFilter,
   roletaMatchesCorretor,
   roletaMatchesDiretoria,
   roletaMatchesLiderancaTeam,
   type LiderancaTeamFilter,
+  type RoletasOrgFilterState,
 } from '@/utils/roletaOrgFilter'
 
 export type RoletaStatusFilter = RoletaOperationalStatus | 'todas'
@@ -54,6 +57,41 @@ export function filterRoletas(
     }
 
     return true
+  })
+}
+
+function sumCorretorLeadTotals(corretores: RoletaStat['corretores']) {
+  let totalLeads = 0
+  let geralLeads = 0
+  let economicoLeads = 0
+
+  for (const corretor of corretores ?? []) {
+    totalLeads += corretor.totalLeads ?? 0
+    geralLeads += corretor.geralLeads ?? 0
+    economicoLeads += corretor.economicoLeads ?? 0
+  }
+
+  return { totalLeads, geralLeads, economicoLeads }
+}
+
+export function scopeRoletasCorretores(
+  roletas: RoletaStat[],
+  filters: RoletasOrgFilterState,
+  options?: { liderancaTeam?: LiderancaTeamFilter }
+): RoletaStat[] {
+  if (!hasRoletasOrgFilter(filters)) return roletas
+
+  return roletas.map((roleta) => {
+    const corretores = (roleta.corretores ?? []).filter((corretor) =>
+      corretorMatchesRoletasOrgFilters(corretor, filters, options)
+    )
+    const leadTotals = sumCorretorLeadTotals(corretores)
+
+    return {
+      ...roleta,
+      corretores,
+      ...leadTotals,
+    }
   })
 }
 

@@ -6,6 +6,10 @@ import {
 } from '@/lib/server/cachedBitrix'
 import { collectMembershipLiderancaOptions } from '@/api/bitrixRoletaCorretores'
 import {
+  filterActiveRoletaCorretores,
+  summarizeCorretorScope,
+} from '@/utils/filterRoletaCorretores'
+import {
   BITRIX_PAUSED_MESSAGE,
   bitrixRouteErrorStatus,
   isBitrixPaused,
@@ -29,8 +33,15 @@ export async function GET() {
       getCachedOrgStructure(),
     ])
 
+    const activeStuppUserIds = new Set(org.allUserIds)
+
     const payload = roletas.map((roleta) => {
       const membership = membershipData.membershipByRoletaId[roleta.id]
+      const corretores = filterActiveRoletaCorretores(membership?.corretores ?? [], {
+        activeStuppUserIds,
+      })
+      const scope = summarizeCorretorScope(corretores)
+
       return {
         id: roleta.id,
         title: roleta.title,
@@ -39,10 +50,10 @@ export async function GET() {
         liderancaId: roleta.liderancaId,
         liderancaName: roleta.liderancaName,
         createdAt: roleta.createdAt,
-        corretores: membership?.corretores ?? [],
-        diretoriaIds: membership?.diretoriaIds ?? [],
-        liderancaIds: membership?.liderancaIds ?? [],
-        equipeIds: membership?.equipeIds ?? [],
+        corretores,
+        diretoriaIds: scope.diretoriaIds,
+        liderancaIds: scope.liderancaIds,
+        equipeIds: scope.equipeIds,
       }
     })
 

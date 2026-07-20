@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getErrorMessage } from '@/lib/errors'
 import type { UserProfile, UserPermission } from '@/types/access'
-import { parsePermissions } from '@/types/access'
+import { parsePermissions, parseViewSections } from '@/types/access'
 import { emailToUsername, usernameToEmail } from '@/lib/supabase/username'
 import { hasPermission, isAdminProfile } from '@/lib/userPermissions'
 
@@ -28,7 +28,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, role, visao, esteira, diretoria_ids, equipe_id, permissions, created_at')
+    .select('id, username, role, visao, esteira, diretoria_ids, equipe_id, permissions, view_sections, created_at')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -48,6 +48,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
       diretoria_ids: [],
       equipe_id: null,
       permissions: [],
+      view_sections: [],
       created_at: user.created_at,
     }
   }
@@ -109,7 +110,7 @@ export function resolveAccessUsername(input: string): { email: string; username:
 }
 
 const PROFILE_SELECT =
-  'id, username, role, visao, esteira, diretoria_ids, equipe_id, permissions, created_at'
+  'id, username, role, visao, esteira, diretoria_ids, equipe_id, permissions, view_sections, created_at'
 
 function normalizeProfileRow(row: Record<string, unknown>): UserProfile {
   return {
@@ -121,6 +122,7 @@ function normalizeProfileRow(row: Record<string, unknown>): UserProfile {
     diretoria_ids: Array.isArray(row.diretoria_ids) ? row.diretoria_ids.map(String) : [],
     equipe_id: row.equipe_id ? String(row.equipe_id) : null,
     permissions: parsePermissions(row.permissions),
+    view_sections: parseViewSections(row.view_sections),
     created_at: String(row.created_at ?? new Date().toISOString()),
   }
 }
@@ -146,6 +148,7 @@ async function listAccessProfilesFromAuth(): Promise<UserProfile[]> {
       diretoria_ids: user.app_metadata?.diretoria_ids ?? [],
       equipe_id: user.app_metadata?.equipe_id ?? null,
       permissions: user.app_metadata?.permissions ?? [],
+      view_sections: user.app_metadata?.view_sections ?? [],
       created_at: user.created_at,
     })
   )

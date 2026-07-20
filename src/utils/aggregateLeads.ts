@@ -7,9 +7,12 @@ import {
 } from '@/api/bitrixConfig'
 import type { StageCatalog } from '@/api/bitrixStages'
 import {
+  countLostLeadsFromFunnel,
+  countLostLeadsInPipeline,
   groupByStageBreakdown,
   groupByStageOrdered,
-  isLeadInFailureStage,
+  LOST_KPI_STAGE_NAME_ECONOMICO,
+  LOST_KPI_STAGE_NAME_GERAL,
 } from '@/api/bitrixStages'
 import type {
   BitrixLead,
@@ -77,23 +80,46 @@ export function aggregateLeadsData(
         ? economicoCount
         : geralCount + economicoCount
 
-  const leadsForPerdidos =
+  const funnelEconomicoData = groupByStageOrdered(
+    funnelEconomico,
+    economicoStages,
+    labels,
+    ESTEIRA_ECONOMICO_ID
+  )
+  const funnelGeralData = groupByStageOrdered(
+    funnelGeral,
+    geralStages,
+    labels,
+    ESTEIRA_GERAL_ID
+  )
+
+  const economicoPerdidos = Math.max(
+    countLostLeadsInPipeline(
+      funnelEconomico,
+      economicoStages,
+      LOST_KPI_STAGE_NAME_ECONOMICO,
+      ESTEIRA_ECONOMICO_ID,
+      'economico'
+    ),
+    countLostLeadsFromFunnel(funnelEconomicoData, LOST_KPI_STAGE_NAME_ECONOMICO, 'economico')
+  )
+  const geralPerdidos = Math.max(
+    countLostLeadsInPipeline(
+      funnelGeral,
+      geralStages,
+      LOST_KPI_STAGE_NAME_GERAL,
+      ESTEIRA_GERAL_ID,
+      'geral'
+    ),
+    countLostLeadsFromFunnel(funnelGeralData, LOST_KPI_STAGE_NAME_GERAL, 'geral')
+  )
+
+  const leadsPerdidos =
     filters.esteira === 'GERAL'
-      ? funnelGeral
+      ? geralPerdidos
       : filters.esteira === 'ECONOMICO'
-        ? funnelEconomico
-        : filtered
-
-  const leadsPerdidos = leadsForPerdidos.filter((lead) => {
-    const categoryId = lead.category_id ?? ''
-    const definitions = isEconomicoCategory(categoryId)
-      ? stageCatalog.economico
-      : isGeralCategory(categoryId)
-        ? stageCatalog.geral
-        : [...stageCatalog.geral, ...stageCatalog.economico]
-
-    return isLeadInFailureStage(lead, definitions)
-  }).length
+        ? economicoPerdidos
+        : economicoPerdidos + geralPerdidos
 
   const byDiretoriaFromLeads: DiretoriaSummary[] = org.diretorias.map((diretoria) => {
     const userIds = new Set(diretoria.teams.flatMap((t) => t.userIds))
@@ -135,18 +161,8 @@ export function aggregateLeadsData(
     byStage: buildByStageForFilter(filtered, filters.esteira, stageCatalog),
     bySource: groupBySource(filtered, sourceLabels),
     kanbanBoards: buildKanbanBoards(filtered, filters.esteira, stageCatalog, sourceLabels),
-    funnelEconomico: groupByStageOrdered(
-      funnelEconomico,
-      economicoStages,
-      labels,
-      ESTEIRA_ECONOMICO_ID
-    ),
-    funnelGeral: groupByStageOrdered(
-      funnelGeral,
-      geralStages,
-      labels,
-      ESTEIRA_GERAL_ID
-    ),
+    funnelEconomico: funnelEconomicoData,
+    funnelGeral: funnelGeralData,
     overTime: groupByDate(filtered),
     leadDetails: buildLeadExportDetails(filtered, stageCatalog, sourceLabels),
     diretorias: org.diretorias.map((d) => d.name),

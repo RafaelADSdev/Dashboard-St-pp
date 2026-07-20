@@ -10,8 +10,9 @@ import {
   requiresDiretoria,
   requiresEquipe,
 } from '@/lib/accessScope'
-import type { UpdateAccessPayload, UserEsteira, UserPermission, UserProfile, UserVisao } from '@/types/access'
-import { ESTEIRA_OPTIONS, PERMISSION_OPTIONS, VISAO_OPTIONS } from '@/types/access'
+import type { UpdateAccessPayload, UserEsteira, UserPermission, UserProfile, UserViewSection, UserVisao } from '@/types/access'
+import { ALL_VIEW_SECTIONS, ESTEIRA_OPTIONS, PERMISSION_OPTIONS, VISAO_OPTIONS } from '@/types/access'
+import { ViewSectionsField } from '@/components/acessos/ViewSectionsField'
 
 const fieldLabelClass =
   'mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500'
@@ -89,6 +90,9 @@ export function EditAccessModal({ profile, onClose, onSaved }: Props) {
   const [diretoriaIds, setDiretoriaIds] = useState<string[]>(profile.diretoria_ids ?? [])
   const [equipeId, setEquipeId] = useState(profile.equipe_id ?? '')
   const [permissions, setPermissions] = useState<UserPermission[]>(profile.permissions ?? [])
+  const [viewSections, setViewSections] = useState<UserViewSection[]>(
+    profile.view_sections?.length ? profile.view_sections : ALL_VIEW_SECTIONS
+  )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -109,6 +113,7 @@ export function EditAccessModal({ profile, onClose, onSaved }: Props) {
   useEffect(() => {
     if (visao === 'admin') {
       setPermissions([])
+      setViewSections(ALL_VIEW_SECTIONS)
       setEquipeId('')
       setDiretoriaId('')
       setDiretoriaIds([])
@@ -158,6 +163,12 @@ export function EditAccessModal({ profile, onClose, onSaved }: Props) {
     setSubmitting(true)
     setError('')
 
+    if (visao !== 'admin' && viewSections.length === 0) {
+      setError('Selecione ao menos uma área visível para o usuário.')
+      setSubmitting(false)
+      return
+    }
+
     const payload: UpdateAccessPayload = {
       id: profile.id,
       visao,
@@ -169,6 +180,7 @@ export function EditAccessModal({ profile, onClose, onSaved }: Props) {
           : [],
       equipeId: requiresEquipe(visao) ? equipeId : null,
       permissions: visao === 'admin' ? [] : permissions,
+      viewSections: visao === 'admin' ? [] : viewSections,
       ...(password.trim() ? { password: password.trim() } : {}),
     }
 
@@ -353,6 +365,13 @@ export function EditAccessModal({ profile, onClose, onSaved }: Props) {
               </select>
             </div>
           ) : null}
+
+          <ViewSectionsField
+            value={viewSections}
+            onChange={setViewSections}
+            disabled={submitting}
+            isAdmin={visao === 'admin'}
+          />
 
           <div>
             <p className={fieldLabelClass}>Poderes do usuário</p>

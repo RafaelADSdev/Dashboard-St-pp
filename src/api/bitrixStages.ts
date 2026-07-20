@@ -24,18 +24,45 @@ export function buildStageLabels(definitions: BitrixStageDefinition[]): Record<s
   const labels: Record<string, string> = {}
 
   for (const stage of definitions) {
+    const normalized = normalizeStageId(stage.statusId, stage.categoryId)
+    labels[normalized] = stage.name
     labels[stage.statusId] = stage.name
 
-    const shortId = stage.statusId.includes(':')
-      ? stage.statusId.split(':')[1]
-      : stage.statusId
-
-    if (shortId && !labels[shortId]) {
-      labels[shortId] = stage.name
+    const shortId = normalized.includes(':') ? normalized.split(':')[1] : normalized
+    if (shortId) {
+      labels[`cat:${stage.categoryId}:${shortId}`] = stage.name
+      if (!labels[shortId]) {
+        labels[shortId] = stage.name
+      }
     }
   }
 
   return labels
+}
+
+function stageIdsMatch(
+  definitionStageId: string,
+  leadStageId: string,
+  categoryId: string
+): boolean {
+  const normalizedLeadStageId = normalizeStageId(leadStageId, categoryId)
+  const normalizedDefinitionStageId = normalizeStageId(definitionStageId, categoryId)
+
+  if (normalizedDefinitionStageId === normalizedLeadStageId) return true
+  if (definitionStageId === leadStageId) return true
+
+  const leadShortId = normalizedLeadStageId.includes(':')
+    ? normalizedLeadStageId.split(':')[1]
+    : normalizedLeadStageId
+  const definitionShortId = normalizedDefinitionStageId.includes(':')
+    ? normalizedDefinitionStageId.split(':')[1]
+    : normalizedDefinitionStageId
+
+  return Boolean(
+    (leadShortId && definitionShortId && leadShortId === definitionShortId) ||
+      (leadShortId && leadShortId === definitionStageId) ||
+      (definitionShortId && definitionShortId === leadStageId)
+  )
 }
 
 export function resolveStageLabel(
@@ -48,6 +75,13 @@ export function resolveStageLabel(
   if (categoryId) {
     const normalized = normalizeStageId(stageId, categoryId)
     if (labels[normalized]) return labels[normalized]
+
+    const shortId = normalized.includes(':') ? normalized.split(':')[1] : normalized
+    if (shortId) {
+      const scoped = `cat:${categoryId}:${shortId}`
+      if (labels[scoped]) return labels[scoped]
+      if (labels[shortId]) return labels[shortId]
+    }
   }
 
   return stageId
@@ -70,25 +104,26 @@ export function groupByStageOrdered(
   labels: Record<string, string>,
   categoryId: string
 ): { x: string; y: number }[] {
-  const countsByStatusId: Record<string, number> = {}
-
-  for (const lead of leads) {
-    const normalized = normalizeStageId(lead.stage_id, categoryId)
-    countsByStatusId[normalized] = (countsByStatusId[normalized] ?? 0) + 1
-  }
-
-  const knownIds = new Set(definitions.map((stage) => stage.statusId))
   const result = definitions.map((stage) => ({
     x: stage.name,
-    y: countsByStatusId[stage.statusId] ?? 0,
+    y: leads.filter((lead) => stageIdsMatch(stage.statusId, lead.stage_id, categoryId)).length,
   }))
 
-  for (const [stageId, count] of Object.entries(countsByStatusId)) {
-    if (knownIds.has(stageId) || count === 0) continue
-    result.push({
-      x: labels[stageId] ?? stageId,
-      y: count,
-    })
+  const unknownCounts = new Map<string, number>()
+
+  for (const lead of leads) {
+    const matched = definitions.some((stage) =>
+      stageIdsMatch(stage.statusId, lead.stage_id, categoryId)
+    )
+    if (matched) continue
+
+    const label = resolveStageLabel(lead.stage_id, labels, categoryId)
+    unknownCounts.set(label, (unknownCounts.get(label) ?? 0) + 1)
+  }
+
+  for (const [label, count] of unknownCounts) {
+    if (count === 0) continue
+    result.push({ x: label, y: count })
   }
 
   return result
@@ -99,12 +134,93 @@ export function isLeadInFailureStage(
   definitions: BitrixStageDefinition[]
 ): boolean {
   const categoryId = lead.category_id ?? ''
-  const normalized = normalizeStageId(lead.stage_id, categoryId)
-  const stage = definitions.find(
-    (item) => item.statusId === normalized || item.statusId === lead.stage_id
+  const stage = definitions.find((item) =>
+    stageIdsMatch(item.statusId, lead.stage_id, categoryId)
   )
 
   return stage?.semantics === 'F'
+}
+
+export const LOST_KPI_STAGE_NAME_ECONOMICO = 'Perda'
+export const LOST_KPI_STAGE_NAME_GERAL = 'Negocios Perdidos'
+
+function normalizeStageName(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+export function isLeadInNamedStage(
+  lead: { stage_id: string; category_id?: string },
+  definitions: BitrixStageDefinition[],
+  stageName: string
+): boolean {
+  const targetName = normalizeStageName(stageName)
+  if (!targetName) return false
+
+  const categoryId = lead.category_id ?? ''
+
+  return definitions.some(
+    (stage) =>
+      normalizeStageName(stage.name) === targetName &&
+      stageIdsMatch(stage.statusId, lead.stage_id, categoryId)
+  )
+}
+
+function resolveLostStageDefinitions(
+  definitions: BitrixStageDefinition[],
+  stageName: string,
+  pipeline: 'economico' | 'geral'
+): BitrixStageDefinition[] {
+  const targetName = normalizeStageName(stageName)
+  const exactMatches = definitions.filter(
+    (stage) => normalizeStageName(stage.name) === targetName
+  )
+
+  if (exactMatches.length > 0) return exactMatches
+
+  if (pipeline === 'economico') {
+    return definitions.filter((stage) => normalizeStageName(stage.name).includes('perda'))
+  }
+
+  return definitions.filter((stage) => {
+    const name = normalizeStageName(stage.name)
+    return name.includes('negocios perdidos') || name.includes('perdido')
+  })
+}
+
+export function countLostLeadsInPipeline(
+  leads: { stage_id: string }[],
+  definitions: BitrixStageDefinition[],
+  stageName: string,
+  categoryId: string,
+  pipeline: 'economico' | 'geral'
+): number {
+  const lostDefinitions = resolveLostStageDefinitions(definitions, stageName, pipeline)
+  if (lostDefinitions.length === 0) return 0
+
+  return leads.filter((lead) =>
+    lostDefinitions.some((stage) => stageIdsMatch(stage.statusId, lead.stage_id, categoryId))
+  ).length
+}
+
+export function countLostLeadsFromFunnel(
+  funnel: { x: string; y: number }[],
+  stageName: string,
+  pipeline: 'economico' | 'geral'
+): number {
+  const targetName = normalizeStageName(stageName)
+
+  return funnel.reduce((total, item) => {
+    const name = normalizeStageName(item.x)
+    const matches =
+      name === targetName ||
+      (pipeline === 'economico' ? name.includes('perda') : name.includes('perdido'))
+
+    return matches ? total + item.y : total
+  }, 0)
 }
 
 export function groupByStageBreakdown(

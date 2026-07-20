@@ -8,6 +8,12 @@ export type UserPermission =
   | 'esteira_movimentar'
   | 'leads_transferir'
 
+export type UserViewSection =
+  | 'visao_geral'
+  | 'esteira_economico'
+  | 'esteira_geral'
+  | 'roletas'
+
 export interface UserProfile {
   id: string
   username: string
@@ -17,6 +23,7 @@ export interface UserProfile {
   diretoria_ids: string[]
   equipe_id: string | null
   permissions: UserPermission[]
+  view_sections: UserViewSection[]
   created_at: string
 }
 
@@ -28,6 +35,7 @@ export interface CreateAccessPayload {
   diretoriaIds: string[]
   equipeId?: string | null
   permissions: UserPermission[]
+  viewSections: UserViewSection[]
 }
 
 export interface UpdateAccessPayload {
@@ -37,6 +45,7 @@ export interface UpdateAccessPayload {
   diretoriaIds: string[]
   equipeId?: string | null
   permissions: UserPermission[]
+  viewSections: UserViewSection[]
   password?: string
 }
 
@@ -88,6 +97,57 @@ export const PERMISSION_OPTIONS: {
 export const PERMISSION_LABELS = Object.fromEntries(
   PERMISSION_OPTIONS.map((item) => [item.value, item.label])
 ) as Record<UserPermission, string>
+
+export const ALL_VIEW_SECTIONS: UserViewSection[] = [
+  'visao_geral',
+  'esteira_economico',
+  'esteira_geral',
+  'roletas',
+]
+
+export const VIEW_SECTION_OPTIONS: {
+  value: UserViewSection
+  label: string
+  description: string
+}[] = [
+  {
+    value: 'visao_geral',
+    label: 'Visão geral',
+    description: 'Dashboard principal com KPIs e gráficos consolidados.',
+  },
+  {
+    value: 'esteira_economico',
+    label: 'Comercial Econômico',
+    description: 'Kanban e indicadores da esteira econômica.',
+  },
+  {
+    value: 'esteira_geral',
+    label: 'Comercial Geral',
+    description: 'Kanban e indicadores da esteira geral.',
+  },
+  {
+    value: 'roletas',
+    label: 'Roletas',
+    description: 'Catálogo e gestão das roletas Stüpp.',
+  },
+]
+
+export const VIEW_SECTION_LABELS = Object.fromEntries(
+  VIEW_SECTION_OPTIONS.map((item) => [item.value, item.label])
+) as Record<UserViewSection, string>
+
+const VALID_VIEW_SECTIONS = new Set<UserViewSection>(
+  VIEW_SECTION_OPTIONS.map((item) => item.value)
+)
+
+export function parseViewSections(value: unknown): UserViewSection[] {
+  if (!Array.isArray(value)) return []
+  return [
+    ...new Set(
+      value.filter((item): item is UserViewSection => VALID_VIEW_SECTIONS.has(item as UserViewSection))
+    ),
+  ]
+}
 
 const VALID_PERMISSIONS = new Set<UserPermission>(
   PERMISSION_OPTIONS.map((item) => item.value)

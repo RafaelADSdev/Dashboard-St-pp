@@ -12,7 +12,7 @@ export function PageHeader({ title, subtitle, badge, actions }: Props) {
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
         {badge && (
-          <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-600 ring-1 ring-brand-100 mb-2 dark:bg-brand-500/10 dark:text-brand-400 dark:ring-brand-500/30">
+          <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-600 ring-1 ring-brand-100 mb-2 dark:bg-white/10 dark:text-white dark:ring-white/20">
             {badge}
           </span>
         )}

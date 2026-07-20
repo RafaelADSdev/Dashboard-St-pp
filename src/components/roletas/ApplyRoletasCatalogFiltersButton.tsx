@@ -17,7 +17,7 @@ export const EMPTY_ROLETAS_CATALOG_FILTERS: RoletasCatalogFilters = {
   liderancaId: '',
   corretorId: '',
   roletaId: '',
-  status: 'todas',
+  status: 'ativa',
 }
 
 export function roletasCatalogFiltersEqual(
@@ -51,8 +51,8 @@ export function ApplyRoletasCatalogFiltersButton({ draft, applied, onApply }: Pr
         'inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all sm:w-auto sm:min-w-[200px]',
         'focus:outline-none focus:ring-2 focus:ring-brand-500/30',
         hasPending
-          ? 'bg-blue-900 text-white hover:bg-blue-950'
-          : 'cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
+          ? 'bg-brand-600 text-cream shadow-sm hover:bg-brand-700'
+          : 'cursor-not-allowed border border-indigo/10 bg-indigo/5 text-indigo/40 dark:border-cream/10 dark:bg-cream/5 dark:text-cream/35'
       )}
     >
       <Check className="h-4 w-4" />

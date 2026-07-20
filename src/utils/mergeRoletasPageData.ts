@@ -1,6 +1,14 @@
 import type { RoletasDashboardData, RoletaCorretorMember, RoletaStat, StuppRoletaOption } from '@/api/types'
 import type { RoletaOperationalStatus } from '@/lib/roletaStatus'
 import { SEM_LIDERANCA_ID } from '@/lib/resolveRoletaLideranca'
+import {
+  filterActiveRoletaCorretores,
+  summarizeCorretorScope,
+} from '@/utils/filterRoletaCorretores'
+
+export interface MergeRoletasPageDataOptions {
+  activeStuppUserIds?: Set<string>
+}
 
 function enrichCorretoresWithLeadCounts(
   corretores: RoletaCorretorMember[],
@@ -22,14 +30,19 @@ function enrichCorretoresWithLeadCounts(
 
 export function mergeRoletasPageData(
   catalog: StuppRoletaOption[] | undefined,
-  stats: RoletasDashboardData | undefined
+  stats: RoletasDashboardData | undefined,
+  options: MergeRoletasPageDataOptions = {}
 ): RoletasDashboardData | null {
   if (!catalog?.length) return stats ?? null
+
+  const filterOptions = { activeStuppUserIds: options.activeStuppUserIds }
 
   const statsById = new Map((stats?.roletas ?? []).map((item) => [item.id, item]))
 
   const roletas: RoletaStat[] = catalog.map((item) => {
     const fromStats = statsById.get(item.id)
+    const corretores = filterActiveRoletaCorretores(item.corretores ?? [], filterOptions)
+    const scope = summarizeCorretorScope(corretores)
     const meta = {
       id: item.id,
       title: item.title,
@@ -37,25 +50,22 @@ export function mergeRoletasPageData(
       liderancaId: item.liderancaId ?? SEM_LIDERANCA_ID,
       liderancaName: item.liderancaName ?? 'Sem liderança',
       createdAt: item.createdAt,
-      diretoriaIds: item.diretoriaIds ?? [],
-      liderancaIds: item.liderancaIds ?? [],
-      equipeIds: item.equipeIds ?? [],
+      diretoriaIds: scope.diretoriaIds.length ? scope.diretoriaIds : (item.diretoriaIds ?? []),
+      liderancaIds: scope.liderancaIds.length ? scope.liderancaIds : (item.liderancaIds ?? []),
+      equipeIds: scope.equipeIds.length ? scope.equipeIds : (item.equipeIds ?? []),
     }
 
     if (fromStats) {
       return {
         ...fromStats,
         ...meta,
-        corretores: enrichCorretoresWithLeadCounts(
-          item.corretores ?? [],
-          fromStats.corretorLeadCounts
-        ),
+        corretores: enrichCorretoresWithLeadCounts(corretores, fromStats.corretorLeadCounts),
       }
     }
 
     return {
       ...meta,
-      corretores: enrichCorretoresWithLeadCounts(item.corretores ?? []),
+      corretores: enrichCorretoresWithLeadCounts(corretores),
       totalLeads: 0,
       geralLeads: 0,
       economicoLeads: 0,

@@ -1,4 +1,5 @@
 import type { RoletaCorretorMember } from '@/api/types'
+import { getCorretorLiderancaGroupKey } from '@/utils/filterRoletaCorretores'
 
 export function groupCorretoresByLideranca(
   corretores: RoletaCorretorMember[]
@@ -6,7 +7,7 @@ export function groupCorretoresByLideranca(
   const map = new Map<string, RoletaCorretorMember[]>()
 
   for (const corretor of corretores) {
-    const key = corretor.liderancaName ?? corretor.equipe ?? 'Sem liderança'
+    const key = getCorretorLiderancaGroupKey(corretor)
     const list = map.get(key) ?? []
     list.push(corretor)
     map.set(key, list)

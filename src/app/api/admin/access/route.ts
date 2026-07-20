@@ -10,7 +10,8 @@ import {
 import { emailToUsername } from '@/lib/supabase/username'
 import { getCachedOrgStructure } from '@/lib/server/cachedBitrix'
 import type { CreateAccessPayload, UpdateAccessPayload, UserEsteira, UserVisao } from '@/types/access'
-import { parsePermissions } from '@/types/access'
+import { parsePermissions, parseViewSections } from '@/types/access'
+import type { UserViewSection } from '@/types/access'
 
 function parseVisao(value: unknown): UserVisao | null {
   if (value === 'admin' || value === 'diretor' || value === 'lider' || value === 'usuario') {
@@ -24,6 +25,20 @@ function parseEsteira(value: unknown): UserEsteira | null {
     return value
   }
   return null
+}
+
+function resolveStoredViewSections(
+  visao: UserVisao,
+  value: unknown
+): UserViewSection[] | { error: string } {
+  if (visao === 'admin') return []
+
+  const viewSections = parseViewSections(value)
+  if (viewSections.length === 0) {
+    return { error: 'Selecione ao menos uma área visível para o usuário.' }
+  }
+
+  return viewSections
 }
 
 export async function GET() {
@@ -110,6 +125,11 @@ export async function POST(request: Request) {
   const permissions = parsePermissions(body.permissions)
   const authRole = visao === 'admin' ? 'admin' : 'user'
   const effectivePermissions = authRole === 'admin' ? [] : permissions
+  const viewSectionsResult = resolveStoredViewSections(visao, body.viewSections)
+  if ('error' in viewSectionsResult) {
+    return NextResponse.json({ error: viewSectionsResult.error }, { status: 400 })
+  }
+  const effectiveViewSections = viewSectionsResult
 
   const admin = createAdminClient()
 
@@ -124,6 +144,7 @@ export async function POST(request: Request) {
       diretoria_ids: scope.diretoriaIds,
       equipe_id: scope.equipeId,
       permissions: effectivePermissions,
+      view_sections: effectiveViewSections,
     },
     user_metadata: { username },
   })
@@ -146,6 +167,7 @@ export async function POST(request: Request) {
       diretoria_ids: scope.diretoriaIds,
       equipe_id: scope.equipeId,
       permissions: effectivePermissions,
+      view_sections: effectiveViewSections,
     },
     { onConflict: 'id' }
   )
@@ -167,6 +189,7 @@ export async function POST(request: Request) {
       diretoria_ids: scope.diretoriaIds,
       equipe_id: scope.equipeId,
       permissions: effectivePermissions,
+      view_sections: effectiveViewSections,
       created_at: created.user.created_at,
     },
   })
@@ -257,6 +280,11 @@ export async function PATCH(request: Request) {
   const permissions = parsePermissions(body.permissions)
   const authRole = visao === 'admin' ? 'admin' : 'user'
   const effectivePermissions = authRole === 'admin' ? [] : permissions
+  const viewSectionsResult = resolveStoredViewSections(visao, body.viewSections)
+  if ('error' in viewSectionsResult) {
+    return NextResponse.json({ error: viewSectionsResult.error }, { status: 400 })
+  }
+  const effectiveViewSections = viewSectionsResult
 
   const admin = createAdminClient()
 
@@ -279,6 +307,7 @@ export async function PATCH(request: Request) {
       diretoria_ids: scope.diretoriaIds,
       equipe_id: scope.equipeId,
       permissions: effectivePermissions,
+      view_sections: effectiveViewSections,
     },
   })
 
@@ -299,6 +328,7 @@ export async function PATCH(request: Request) {
       diretoria_ids: scope.diretoriaIds,
       equipe_id: scope.equipeId,
       permissions: effectivePermissions,
+      view_sections: effectiveViewSections,
     },
     { onConflict: 'id' }
   )
@@ -320,6 +350,7 @@ export async function PATCH(request: Request) {
       diretoria_ids: scope.diretoriaIds,
       equipe_id: scope.equipeId,
       permissions: effectivePermissions,
+      view_sections: effectiveViewSections,
       created_at: existingUser.user.created_at,
     },
   })

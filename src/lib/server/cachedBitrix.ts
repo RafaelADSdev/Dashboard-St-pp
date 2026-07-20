@@ -23,7 +23,7 @@ export const BITRIX_DISTRIBUTED_CACHE_KEYS = {
   org: 'bitrix:org:v1',
   roletasCatalog: 'bitrix:roletas:catalog:v10',
   roletaMembership: 'bitrix:roletas:membership:v3',
-  stages: 'bitrix:stages:v1',
+  stages: 'bitrix:stages:v3',
   sources: 'bitrix:sources:v1',
 } as const
 
@@ -110,7 +110,7 @@ export const getCachedStageCatalog = unstable_cache(
         }
       }
     ),
-  ['stupp-stage-catalog'],
+  ['stupp-stage-catalog-v3'],
   { revalidate: CACHE_DAY_SECONDS }
 )
 

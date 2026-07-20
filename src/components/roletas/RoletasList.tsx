@@ -122,8 +122,6 @@ function RoletaRow({
           <RoletaManagePanel
             roleta={roleta}
             corretorOptions={corretorOptions}
-            filters={filters}
-            liderancaTeam={liderancaTeam}
             statsLoading={statsLoading}
           />
         </div>

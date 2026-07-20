@@ -29,10 +29,6 @@ async function loadDashboardMetadata() {
     roletasCatalog,
     roletaMembership,
     sourceLabels,
-    corretoresAtivosRoleta: countCorretoresAtivosRoleta(
-      roletasCatalog,
-      roletaMembership.membershipByRoletaId
-    ),
   }
 }
 
@@ -41,7 +37,7 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
   const categoryIds = getCategoryIdsForEsteira(filters.esteira)
   const sequentialCategories = !hasSplitBitrixWebhooks()
 
-  const { org, stageCatalog, roletas, sourceLabels, corretoresAtivosRoleta } =
+  const { org, stageCatalog, roletas, roletasCatalog, roletaMembership, sourceLabels } =
     await loadDashboardMetadata()
 
   const equipeOptions = getEquipeOptions(org)
@@ -53,6 +49,20 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
   const hasUserFilter = Boolean(filters.equipe || filters.diretoria || filters.corretor)
   const roletaTitle = resolveRoletaTitle(roletas, filters.roleta)
   const hasRoletaFilter = Boolean(filters.roleta)
+  const corretoresAtivosRoleta = countCorretoresAtivosRoleta(
+    roletasCatalog,
+    roletaMembership.membershipByRoletaId,
+    {
+      stuppUserIds: new Set(org.allUserIds),
+      filters: {
+        diretoria: filters.diretoria,
+        equipe: filters.equipe,
+        corretor: filters.corretor,
+        roleta: filters.roleta,
+      },
+      org,
+    }
+  )
 
   if ((hasUserFilter && assignedByIds.length === 0) || (hasRoletaFilter && !roletaTitle)) {
     return {

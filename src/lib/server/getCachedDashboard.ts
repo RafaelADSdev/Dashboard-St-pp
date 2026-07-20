@@ -9,7 +9,7 @@ import {
 
 export function getCachedDashboard(filters: FilterParams) {
   const distributedKey = buildDistributedCacheKey(
-    'bitrix:dashboard:v14',
+    'bitrix:dashboard:v17',
     filters
   )
 
@@ -21,7 +21,7 @@ export function getCachedDashboard(filters: FilterParams) {
         () => buildDashboardData(filters)
       ),
     [
-      'dashboard-data-v13',
+      'dashboard-data-v18',
       filters.dateFrom,
       filters.dateTo,
       filters.esteira,
