@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useAppliedFilters } from '@/store/filterStore'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { EsteiraFilter } from '@/components/filters/EsteiraFilter'
@@ -20,6 +21,13 @@ import { ChartCard } from '@/components/ui/ChartCard'
 import { FilterApplyingOverlay } from '@/components/ui/FilterApplyingOverlay'
 import { ErrorState, LoadingState } from '@/components/ui/StatusMessage'
 import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
+import {
+  formatFunnelBottleneckDescription,
+  getFunnelBottleneck,
+  getLostLeadsKpiAlert,
+  KPI_HINT_ALERT_CLASSES,
+  KPI_VALUE_ALERT_CLASSES,
+} from '@/utils/operationalAlert'
 
 function DashboardFilters() {
   return (
@@ -43,6 +51,21 @@ export function DashboardPage() {
   )
   const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
   const diretoriaSelected = Boolean(applied?.diretoria)
+
+  const lostLeadsAlert = useMemo(
+    () => getLostLeadsKpiAlert(data?.leadsPerdidos ?? 0, data?.totalLeads ?? 0),
+    [data?.leadsPerdidos, data?.totalLeads]
+  )
+
+  const funnelEconomicoBottleneck = useMemo(
+    () => getFunnelBottleneck(data?.funnelEconomico ?? []),
+    [data?.funnelEconomico]
+  )
+
+  const funnelGeralBottleneck = useMemo(
+    () => getFunnelBottleneck(data?.funnelGeral ?? []),
+    [data?.funnelGeral]
+  )
 
   return (
     <>
@@ -69,9 +92,17 @@ export function DashboardPage() {
 
             <FilterApplyingOverlay isActive={isApplyingFilters}>
               <div className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <KPICard label="Leads recebidos" value={data?.totalLeads ?? 0} color="brand" />
-                  <KPICard label="Leads perdidos" value={data?.leadsPerdidos ?? 0} color="indigo" />
+                  <KPICard
+                    label="Leads perdidos"
+                    value={data?.leadsPerdidos ?? 0}
+                    color="indigo"
+                    alertLevel={lostLeadsAlert.level}
+                    valueClassName={KPI_VALUE_ALERT_CLASSES[lostLeadsAlert.level]}
+                    secondaryHint={lostLeadsAlert.hint}
+                    secondaryHintClassName={KPI_HINT_ALERT_CLASSES[lostLeadsAlert.level]}
+                  />
                   <KPICard
                     label="Corretores ativos roleta"
                     value={data?.corretoresAtivosRoleta ?? 0}
@@ -79,7 +110,7 @@ export function DashboardPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                   <ChartCard
                     title={diretoriaSelected ? 'Leads por equipe' : 'Leads por diretoria'}
                     description={
@@ -98,11 +129,33 @@ export function DashboardPage() {
                   </ChartCard>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                  <ChartCard title="Funil — Comercial Econômico" description="Etapas do pipeline econômico">
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                  <ChartCard
+                    title="Funil — Comercial Econômico"
+                    description={formatFunnelBottleneckDescription(
+                      funnelEconomicoBottleneck,
+                      'Etapas do pipeline econômico'
+                    )}
+                    descriptionClassName={
+                      funnelEconomicoBottleneck && funnelEconomicoBottleneck.level !== 'ok'
+                        ? `font-semibold ${KPI_HINT_ALERT_CLASSES[funnelEconomicoBottleneck.level]}`
+                        : undefined
+                    }
+                  >
                     <PipelineFunnelChart data={data?.funnelEconomico ?? []} />
                   </ChartCard>
-                  <ChartCard title="Funil — Comercial Geral" description="Etapas do pipeline geral">
+                  <ChartCard
+                    title="Funil — Comercial Geral"
+                    description={formatFunnelBottleneckDescription(
+                      funnelGeralBottleneck,
+                      'Etapas do pipeline geral'
+                    )}
+                    descriptionClassName={
+                      funnelGeralBottleneck && funnelGeralBottleneck.level !== 'ok'
+                        ? `font-semibold ${KPI_HINT_ALERT_CLASSES[funnelGeralBottleneck.level]}`
+                        : undefined
+                    }
+                  >
                     <PipelineFunnelChart data={data?.funnelGeral ?? []} />
                   </ChartCard>
                 </div>

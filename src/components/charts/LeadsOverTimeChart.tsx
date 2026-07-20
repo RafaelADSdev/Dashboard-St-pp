@@ -4,6 +4,8 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { animate, motion, useReducedMotion } from 'motion/react'
 import clsx from 'clsx'
 import { useChartTheme } from '@/hooks/useChartTheme'
+import { CHART_SERIES_COLORS } from '@/lib/stageColors'
+import { chartEmptyState, chartLegendText, chartTooltipMuted, chartTooltipSurface, chartTooltipValue } from './chartUi'
 
 interface DataPoint {
   date: string
@@ -27,8 +29,8 @@ const CHART_HEIGHT = 280
 const PADDING = { top: 28, right: 28, bottom: 44, left: 48 }
 
 const SERIES: Record<'economico' | 'geral', SeriesConfig> = {
-  economico: { key: 'economico', label: 'Econômico', color: '#6366f1' },
-  geral: { key: 'geral', label: 'Geral', color: '#10b981' },
+  economico: { key: 'economico', label: 'Econômico', color: CHART_SERIES_COLORS.economico },
+  geral: { key: 'geral', label: 'Geral', color: CHART_SERIES_COLORS.geral },
 }
 
 function getInnerSize() {
@@ -123,13 +125,11 @@ function ChartAnnotation({
   series,
   x,
   y,
-  isDark,
 }: {
   point: DataPoint
   series: SeriesConfig[]
   x: number
   y: number
-  isDark: boolean
 }) {
   const left = `${(x / CHART_WIDTH) * 100}%`
   const top = `${(y / CHART_HEIGHT) * 100}%`
@@ -137,17 +137,15 @@ function ChartAnnotation({
   return (
     <motion.div
       className={clsx(
-        'pointer-events-none absolute z-10 min-w-[148px] -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-xl border px-3 py-2 shadow-lg',
-        isDark
-          ? 'border-white/10 bg-indigo/95 text-cream'
-          : 'border-slate-200/80 bg-white/95 text-slate-900'
+        'pointer-events-none absolute z-10 min-w-[148px] -translate-x-1/2 -translate-y-[calc(100%+14px)]',
+        chartTooltipSurface
       )}
       style={{ left, top }}
       initial={{ opacity: 0, y: 8, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
     >
-      <p className={clsx('text-[11px] font-semibold', isDark ? 'text-cream/70' : 'text-slate-500')}>
+      <p className={clsx('text-[11px] font-semibold', chartTooltipMuted)}>
         {point.date}
       </p>
       <div className="mt-1 space-y-1">
@@ -157,7 +155,7 @@ function ChartAnnotation({
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
               {item.label}
             </span>
-            <span className="font-semibold tabular-nums">
+            <span className={clsx('font-semibold tabular-nums', chartTooltipValue)}>
               <AnimatedNumber value={point[item.key]} />
             </span>
           </div>
@@ -216,7 +214,7 @@ export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
 
   if (!data.length) {
     return (
-      <div className="flex h-[280px] items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+      <div className={clsx('flex h-[280px] items-center justify-center', chartEmptyState)}>
         Sem dados no período selecionado.
       </div>
     )
@@ -325,7 +323,7 @@ export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
               x2={cursorX}
               y1={PADDING.top}
               y2={PADDING.top + getInnerSize().height}
-              stroke={chart.isDark ? 'rgba(241,245,249,0.35)' : 'rgba(15,23,42,0.18)'}
+              stroke={chart.isDark ? 'rgba(240,231,213,0.35)' : 'rgba(33,40,66,0.15)'}
               strokeWidth={1.5}
               initial={false}
               animate={{ opacity: 1 }}
@@ -352,7 +350,7 @@ export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
                     cx={cursorX}
                     cy={y}
                     r={4.5}
-                    fill={chart.isDark ? '#0f172a' : '#ffffff'}
+                    fill={chart.isDark ? '#212529' : '#f8f9fa'}
                     stroke={item.color}
                     strokeWidth={2.5}
                     initial={false}
@@ -372,12 +370,11 @@ export function LeadsOverTimeChart({ data, esteira = 'both' }: Props) {
           series={visibleSeries}
           x={cursorX}
           y={cursorY}
-          isDark={chart.isDark}
         />
       )}
 
       {esteira === 'both' && (
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600 dark:text-slate-300">
+        <div className={clsx('mt-3 flex flex-wrap items-center justify-center gap-4', chartLegendText)}>
           {visibleSeries.map((item) => (
             <span key={item.key} className="inline-flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />

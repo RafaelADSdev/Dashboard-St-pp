@@ -3,38 +3,38 @@ import { ArrowLeft } from 'lucide-react'
 
 const palette = [
   {
-    name: 'Midnight Indigo',
-    hex: '#212842',
+    name: 'Charcoal',
+    hex: '#343A40',
     usage: 'Sidebar, textos principais, botões primários',
     textClass: 'text-cream',
   },
   {
-    name: 'Vanilla Cream',
-    hex: '#F0E7D5',
-    usage: 'Fundo principal, textos na sidebar',
+    name: 'Cloud White',
+    hex: '#F8F9FA',
+    usage: 'Fundo principal, cards, sidebar clara',
     textClass: 'text-indigo',
   },
   {
-    name: 'Indigo Light',
-    hex: '#2A3252',
+    name: 'Charcoal Light',
+    hex: '#495057',
     usage: 'Hover da sidebar, bordas escuras',
     textClass: 'text-cream',
   },
   {
-    name: 'Indigo Lighter',
-    hex: '#323B5E',
+    name: 'Charcoal Lighter',
+    hex: '#5C636A',
     usage: 'Item ativo da sidebar',
     textClass: 'text-cream',
   },
   {
-    name: 'Cloud White',
-    hex: '#F5F5F5',
-    usage: 'Cards, sidebar clara, superfícies elevadas',
-    textClass: 'text-indigo',
+    name: 'Charcoal Dark',
+    hex: '#212529',
+    usage: 'Fundo do modo escuro',
+    textClass: 'text-cream',
   },
   {
-    name: 'Cream Muted',
-    hex: '#E5D9C4',
+    name: 'Cloud Muted',
+    hex: '#E9ECEF',
     usage: 'Hover em fundos claros',
     textClass: 'text-indigo',
   },
@@ -54,7 +54,7 @@ export default function PaletaPage() {
 
         <h1 className="text-3xl font-bold tracking-tight text-indigo">Paleta de cores</h1>
         <p className="mt-2 max-w-2xl text-indigo/70">
-          Midnight Indigo e Vanilla Cream aplicados no projeto para análise visual.
+          Charcoal e Cloud White aplicados no projeto para análise visual.
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
@@ -84,11 +84,11 @@ export default function PaletaPage() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl bg-sidebar p-5 text-cream">
               <p className="text-sm font-medium opacity-80">Sidebar</p>
-              <p className="mt-1 text-lg font-semibold">Indigo + Cream</p>
+              <p className="mt-1 text-lg font-semibold">Charcoal + Cloud</p>
             </div>
             <div className="rounded-xl bg-cream p-5 text-indigo ring-1 ring-indigo/10">
               <p className="text-sm font-medium opacity-70">Área principal</p>
-              <p className="mt-1 text-lg font-semibold">Cream + Indigo</p>
+              <p className="mt-1 text-lg font-semibold">Cloud + Navy</p>
             </div>
             <button
               type="button"

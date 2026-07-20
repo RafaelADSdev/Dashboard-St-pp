@@ -1,5 +1,6 @@
 'use client'
 
+import clsx from 'clsx'
 import { useMemo, useState } from 'react'
 import {
   Bar,
@@ -15,8 +16,18 @@ import type { TooltipContentProps } from 'recharts'
 import type { RoletaLeadSummary, SourceLeadSummary } from '@/api/types'
 import { isStuppRoletaTitle } from '@/api/bitrixRoletas'
 import { useChartTheme } from '@/hooks/useChartTheme'
+import { getRankingBarColor } from '@/lib/stageColors'
+import {
+  chartEmptyState,
+  chartSectionTitle,
+  chartTooltipBody,
+  chartTooltipDivider,
+  chartTooltipMuted,
+  chartTooltipSurface,
+  chartTooltipTitle,
+  chartTooltipValue,
+} from './chartUi'
 
-const BAR_COLORS = ['#6366f1', '#10b981', '#0ea5e9', '#f59e0b', '#8b5cf6', '#ec4899', '#22c55e', '#3b82f6']
 const ROleta_PAGE_SIZE = 10
 const LABEL_MAX_CHARS = 32
 
@@ -37,26 +48,22 @@ function RoletaBreakdownTooltip({ active, payload, label }: TooltipContentProps)
   if (!item) return null
 
   return (
-    <div className="max-w-sm rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-      <p className="text-sm font-semibold leading-snug text-slate-900 dark:text-slate-100">{item.roleta}</p>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Total: <span className="font-semibold text-slate-800 dark:text-slate-100">{item.count}</span>
+    <div className={clsx('max-w-sm', chartTooltipSurface)}>
+      <p className={clsx('leading-snug', chartTooltipTitle)}>{item.roleta}</p>
+      <p className={clsx('mt-1', chartTooltipMuted)}>
+        Total: <span className={chartTooltipValue}>{item.count}</span>
       </p>
       {item.sources.length > 0 && (
-        <div className="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Origens nesta roleta
-          </p>
+        <div className={clsx('mt-2', chartTooltipDivider)}>
+          <p className={clsx('mb-1', chartTooltipMuted)}>Origens nesta roleta</p>
           <ul className="max-h-40 space-y-1 overflow-y-auto">
             {item.sources.map((entry) => (
               <li
                 key={entry.source}
-                className="flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300"
+                className={clsx('flex items-center justify-between gap-3', chartTooltipBody)}
               >
                 <span className="truncate">{entry.source}</span>
-                <span className="shrink-0 font-semibold tabular-nums text-slate-900 dark:text-slate-100">
-                  {entry.count}
-                </span>
+                <span className={clsx('shrink-0', chartTooltipValue)}>{entry.count}</span>
               </li>
             ))}
           </ul>
@@ -75,26 +82,22 @@ function SourceBreakdownTooltip({ active, payload, label }: TooltipContentProps)
   const stuppRoletas = item.roletas.filter((entry) => isStuppRoletaTitle(entry.roleta))
 
   return (
-    <div className="max-w-sm rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</p>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-        Total: <span className="font-semibold text-slate-800 dark:text-slate-100">{item.count}</span>
+    <div className={clsx('max-w-sm', chartTooltipSurface)}>
+      <p className={chartTooltipTitle}>{label}</p>
+      <p className={clsx('mt-1', chartTooltipMuted)}>
+        Total: <span className={chartTooltipValue}>{item.count}</span>
       </p>
       {stuppRoletas.length > 0 && (
-        <div className="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-            Roletas Stüpp desta origem
-          </p>
+        <div className={clsx('mt-2', chartTooltipDivider)}>
+          <p className={clsx('mb-1', chartTooltipMuted)}>Roletas Stüpp desta origem</p>
           <ul className="max-h-40 space-y-1 overflow-y-auto">
             {stuppRoletas.map((entry) => (
               <li
                 key={entry.roleta}
-                className="flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300"
+                className={clsx('flex items-center justify-between gap-3', chartTooltipBody)}
               >
                 <span className="truncate">{entry.roleta}</span>
-                <span className="shrink-0 font-semibold tabular-nums text-slate-900 dark:text-slate-100">
-                  {entry.count}
-                </span>
+                <span className={clsx('shrink-0', chartTooltipValue)}>{entry.count}</span>
               </li>
             ))}
           </ul>
@@ -118,17 +121,18 @@ function RoletaRankingChart({ data }: { data: RoletaLeadSummary[] }) {
 
   if (stuppRoletas.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className={clsx('py-6 text-center', chartEmptyState)}>
         Nenhuma roleta Stüpp encontrada no período.
       </p>
     )
   }
 
   const chartHeight = Math.max(220, visibleData.length * 40)
+  const maxCount = visibleData.reduce((max, item) => Math.max(max, item.count), 0)
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+      <h3 className={clsx('mb-3', chartSectionTitle)}>
         Roletas Stüpp com mais leads
       </h3>
       <ResponsiveContainer width="100%" height={chartHeight}>
@@ -157,8 +161,8 @@ function RoletaRankingChart({ data }: { data: RoletaLeadSummary[] }) {
           />
           <Tooltip content={RoletaBreakdownTooltip} cursor={{ fill: chart.cursor }} />
           <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
-            {visibleData.map((_, index) => (
-              <Cell key={index} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+            {visibleData.map((item, index) => (
+              <Cell key={index} fill={getRankingBarColor(item.count, maxCount)} />
             ))}
           </Bar>
         </BarChart>
@@ -186,17 +190,18 @@ function SourceRankingChart({ data }: { data: SourceLeadSummary[] }) {
 
   if (data.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className={clsx('py-6 text-center', chartEmptyState)}>
         Nenhuma origem encontrada no período.
       </p>
     )
   }
 
   const chartHeight = Math.max(220, data.length * 34)
+  const maxCount = data.reduce((max, item) => Math.max(max, item.count), 0)
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+      <h3 className={clsx('mb-3', chartSectionTitle)}>
         Origens de captação
       </h3>
       <ResponsiveContainer width="100%" height={chartHeight}>
@@ -213,8 +218,8 @@ function SourceRankingChart({ data }: { data: SourceLeadSummary[] }) {
           />
           <Tooltip content={SourceBreakdownTooltip} cursor={{ fill: chart.cursor }} />
           <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
-            {data.map((_, index) => (
-              <Cell key={index} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+            {data.map((item, index) => (
+              <Cell key={index} fill={getRankingBarColor(item.count, maxCount)} />
             ))}
           </Bar>
         </BarChart>
@@ -231,7 +236,7 @@ export function LeadsBySourceChart({ bySource, byRoleta }: Props) {
 
   if (bySource.length === 0 && stuppRoletas.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className={clsx('py-8 text-center', chartEmptyState)}>
         Nenhuma origem ou roleta Stüpp encontrada no período.
       </p>
     )

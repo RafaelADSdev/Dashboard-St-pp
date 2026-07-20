@@ -11,9 +11,8 @@ import {
   Cell,
 } from 'recharts'
 import { useChartTheme } from '@/hooks/useChartTheme'
+import { getStageChartColor } from '@/lib/stageColors'
 import { ChartTooltip } from './ChartTooltip'
-
-const STAGE_COLORS = ['#f59e0b', '#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#22c55e', '#ef4444']
 
 interface Props {
   data: { stage: string; count: number }[]
@@ -38,7 +37,7 @@ export function LeadsByStageChart({ data }: Props) {
         <Tooltip content={ChartTooltip} cursor={{ fill: chart.cursor }} />
         <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
           {data.map((_, i) => (
-            <Cell key={i} fill={STAGE_COLORS[i % STAGE_COLORS.length]} />
+            <Cell key={i} fill={getStageChartColor(i)} />
           ))}
         </Bar>
       </BarChart>

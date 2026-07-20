@@ -262,13 +262,13 @@ export function RoletasPage() {
                   <KPICard
                     label="Roletas novas"
                     value={statusCounts.nova}
-                    color="brand"
+                    color="amber"
                     icon={Sparkles}
                   />
                   <KPICard
                     label="Roletas suspensas"
                     value={statusCounts.suspensa}
-                    color="default"
+                    color="red"
                     icon={PauseCircle}
                   />
                   <KPICard

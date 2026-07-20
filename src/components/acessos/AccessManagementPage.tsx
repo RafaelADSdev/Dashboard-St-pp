@@ -294,26 +294,26 @@ export function AccessManagementPage() {
   if (profileLoading || !profile?.isAdmin) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
       </div>
     )
   }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <section className="overflow-hidden rounded-2xl bg-linear-to-r from-violet-700 via-violet-600 to-indigo-700 px-6 py-8 text-white shadow-lg">
+      <section className="overflow-hidden rounded-2xl bg-brand-600 px-6 py-8 text-cream">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-violet-200">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cream/70">
               Administração
             </p>
             <div className="mt-2 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10">
                 <Shield className="h-5 w-5" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Gestão de acesso</h1>
-                <p className="mt-1 max-w-2xl text-sm text-violet-100">
+                <p className="mt-1 max-w-2xl text-sm text-cream/80">
                   Crie, edite ou exclua acessos. Ajuste a visão, a esteira, a diretoria e a equipe
                   de cada usuário.
                 </p>
@@ -323,7 +323,7 @@ export function AccessManagementPage() {
 
           <Link
             href="/"
-            className="inline-flex items-center gap-2 self-start rounded-xl border border-white/20 bg-white px-4 py-2.5 text-sm font-medium text-violet-700 transition hover:bg-violet-50"
+            className="inline-flex items-center gap-2 self-start rounded-xl border border-cream/20 bg-cream px-4 py-2.5 text-sm font-medium text-brand-600 transition hover:bg-brand-50"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar ao dashboard

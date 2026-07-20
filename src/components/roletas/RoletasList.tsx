@@ -14,6 +14,7 @@ import {
 import { type LiderancaTeamFilter } from '@/utils/roletaOrgFilter'
 import { RoletaManagePanel } from './RoletaManagePanel'
 import { RoletaStatusBadge } from './RoletaStatusBadge'
+import { roletaStatusBadgeStyles } from './roletaStatusButtonStyles'
 
 interface Props {
   roletas: RoletaStat[]
@@ -177,12 +178,7 @@ export function RoletasList({
               <span
                 className={clsx(
                   'rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
-                  status === 'ativa' &&
-                    'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
-                  status === 'nova' &&
-                    'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300',
-                  status === 'suspensa' &&
-                    'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                  roletaStatusBadgeStyles[status].count
                 )}
               >
                 {items.length}

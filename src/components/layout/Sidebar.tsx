@@ -34,7 +34,7 @@ export function Sidebar() {
   return (
     <aside
       className={clsx(
-        'sticky top-0 flex h-screen shrink-0 flex-col border-r border-indigo/10 bg-[#f5f5f5] text-indigo transition-[width] duration-200 ease-out dark:border-indigo-light dark:bg-sidebar dark:text-cream',
+        'sticky top-0 flex h-screen shrink-0 flex-col border-r border-indigo/10 bg-[#f8f9fa] text-indigo transition-[width] duration-200 ease-out dark:border-indigo-light dark:bg-sidebar dark:text-cream',
         sidebarOpen ? 'w-[260px]' : 'w-[72px]'
       )}
       aria-label="Menu de navegação"

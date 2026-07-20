@@ -1,5 +1,6 @@
 'use client'
 
+import clsx from 'clsx'
 import {
   BarChart,
   Bar,
@@ -8,10 +9,14 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from 'recharts'
 import type { DiretoriaSummary } from '@/api/types'
+import { getDiretoriaColor } from '@/lib/diretoriaColors'
 import { useChartTheme } from '@/hooks/useChartTheme'
+import { getRankingBarColor } from '@/lib/stageColors'
 import { ChartTooltip } from './ChartTooltip'
+import { chartEmptyState } from './chartUi'
 
 interface TeamRow {
   equipe: string
@@ -38,7 +43,7 @@ export function LeadsByTeamPanel({ byDiretoria = [], byTeam }: Props) {
 
   if (chartData.length === 0) {
     return (
-      <p className="text-sm text-slate-400 dark:text-slate-500 py-12 text-center">
+      <p className={clsx(chartEmptyState, 'py-12 text-center')}>
         {teamMode
           ? 'Nenhum lead no período para as equipes selecionadas.'
           : 'Nenhum lead no período para as diretorias.'}
@@ -47,6 +52,7 @@ export function LeadsByTeamPanel({ byDiretoria = [], byTeam }: Props) {
   }
 
   const chartHeight = Math.max(260, chartData.length * 44)
+  const maxLeads = chartData.reduce((max, row) => Math.max(max, row.leads), 0)
 
   return (
     <ResponsiveContainer width="100%" height={chartHeight}>
@@ -67,12 +73,39 @@ export function LeadsByTeamPanel({ byDiretoria = [], byTeam }: Props) {
           dataKey="name"
           width={teamMode ? 180 : 92}
           interval={0}
-          tick={{ fontSize: 11, fill: chart.tickSecondary }}
+          tick={
+            teamMode
+              ? { fontSize: 11, fill: chart.tickSecondary }
+              : ({ x, y, payload }) => (
+                  <text
+                    x={x}
+                    y={y}
+                    dy={4}
+                    textAnchor="end"
+                    fill={getDiretoriaColor(String(payload?.value ?? ''))}
+                    fontSize={11}
+                    fontWeight={600}
+                  >
+                    {String(payload?.value ?? '')}
+                  </text>
+                )
+          }
           axisLine={false}
           tickLine={false}
         />
         <Tooltip content={ChartTooltip} cursor={{ fill: chart.cursor }} />
-        <Bar dataKey="leads" name="Leads" fill="#1e3a8a" radius={[0, 6, 6, 0]} maxBarSize={32} />
+        <Bar dataKey="leads" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={32}>
+          {chartData.map((row, index) => (
+            <Cell
+              key={index}
+              fill={
+                teamMode
+                  ? getRankingBarColor(row.leads, maxLeads)
+                  : getDiretoriaColor(row.name)
+              }
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   )

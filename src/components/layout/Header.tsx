@@ -41,7 +41,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-end gap-4 border-b border-indigo/10 bg-[#f5f5f5]/95 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-indigo/80 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex items-center justify-end gap-4 border-b border-indigo/10 bg-[#f8f9fa]/95 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-indigo/80 sm:px-6 lg:px-8">
       <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle />
         <button
@@ -58,7 +58,7 @@ export function Header() {
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Filtros
           {(hasPending || hasActiveFilters) && (
-            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand-600 ring-2 ring-[#f5f5f5] dark:ring-indigo" />
+            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand-600 ring-2 ring-[#f8f9fa] dark:ring-indigo" />
           )}
         </button>
         <button

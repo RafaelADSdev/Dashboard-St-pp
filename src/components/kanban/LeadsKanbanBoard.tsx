@@ -37,6 +37,28 @@ import { useUserPermissions } from '@/hooks/useUserPermissions'
 import type { StuppCorretorOption } from '@/lib/orgPreview'
 import { getStageChartColor, withAlpha } from '@/lib/stageColors'
 import { formatBitrixDateOnly } from '@/utils/leadTiming'
+import {
+  getCardOperationalAlert,
+  getColumnMaxStaleDays,
+  getOperationalAlert,
+  OPERATIONAL_ALERT_WARNING_DAYS,
+} from '@/utils/operationalAlert'
+import { OperationalAlertBadge } from '@/components/ui/OperationalAlertBadge'
+import { filterInputClass, filterSelectClass } from '@/components/ui/styles'
+import {
+  kanbanColumn,
+  kanbanEmpty,
+  kanbanFieldCard,
+  kanbanIconButton,
+  kanbanModal,
+  kanbanModalBackdrop,
+  kanbanModalHeader,
+  kanbanSurface,
+  kanbanTextMuted,
+  kanbanTextPrimary,
+  kanbanTextSecondary,
+  kanbanTextSubtle,
+} from '@/components/kanban/kanbanUi'
 import { moveKanbanCard, updateKanbanCardAssignee, updateKanbanCardsAssignee } from '@/utils/buildKanbanBoards'
 
 interface Props {
@@ -119,27 +141,27 @@ function KanbanAssignCorretor({
   const selectedCorretor = available.find((corretor) => corretor.id === targetId)
 
   return (
-    <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-4">
+    <div className={clsx('border-t px-4 py-4', 'border-indigo/10 dark:border-cloud/10')}>
       <div className="mb-3 flex items-center gap-2">
-        <ArrowRightLeft className="h-4 w-4 text-blue-700" />
-        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h4>
+        <ArrowRightLeft className="h-4 w-4 text-indigo dark:text-indigo-300" />
+        <h4 className={clsx('text-sm font-semibold', kanbanTextPrimary)}>{title}</h4>
       </div>
 
       <div className="relative mb-2">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+        <Search className={clsx('pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2', kanbanTextSubtle)} />
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar corretor, equipe ou diretoria"
-          className="h-9 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-3 text-sm text-slate-800 dark:text-slate-200 outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15"
+          className={clsx(filterInputClass, 'h-9 w-full pl-9')}
         />
       </div>
 
       <select
         value={targetId}
         onChange={(event) => setTargetId(event.target.value)}
-        className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-800 dark:text-slate-200 outline-none transition-colors focus:border-blue-400 focus:ring-2 focus:ring-blue-400/15"
+        className={clsx(filterSelectClass, 'h-10 w-full')}
       >
         <option value="">Selecione o novo responsável</option>
         {filtered.map((corretor) => (
@@ -150,7 +172,7 @@ function KanbanAssignCorretor({
       </select>
 
       {selectedCorretor ? (
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <p className={clsx('mt-2 text-xs', kanbanTextMuted)}>
           {selectedCorretor.diretoria} · {selectedCorretor.equipe}
         </p>
       ) : null}
@@ -168,8 +190,8 @@ function KanbanAssignCorretor({
         className={clsx(
           'mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors',
           !selectedCorretor || isPending
-            ? 'cursor-not-allowed bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
-            : 'bg-blue-900 text-white hover:bg-blue-950'
+            ? 'cursor-not-allowed bg-indigo/10 text-indigo/40 dark:bg-cloud/10 dark:text-cream/40'
+            : 'bg-brand-600 text-cream hover:bg-brand-700'
         )}
       >
         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -197,12 +219,14 @@ function KanbanLeadModal({
   canTransfer: boolean
 }) {
   const { card, stageName, stageColor } = selected
+  const staleAlert = getCardOperationalAlert(card)
   const fields = [
     { icon: UserRound, label: 'Responsável', value: card.assignedByName },
     { icon: Building2, label: 'Diretoria', value: card.diretoria },
     { icon: CircleDot, label: 'Roleta', value: card.roleta },
     { icon: Megaphone, label: 'Origem', value: card.source },
     { icon: Calendar, label: 'Data de entrada', value: formatBitrixDateOnly(card.dateCreate) },
+    { icon: Calendar, label: 'Última movimentação', value: formatBitrixDateOnly(card.dateModify) },
   ]
 
   useEffect(() => {
@@ -227,7 +251,7 @@ function KanbanLeadModal({
       onClick={onClose}
     >
       <div
-        className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"
+        className={kanbanModalBackdrop}
         aria-hidden
       />
 
@@ -235,12 +259,12 @@ function KanbanLeadModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="kanban-lead-modal-title"
-        className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl"
+        className={kanbanModal}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="h-2 shrink-0" style={{ backgroundColor: stageColor }} />
 
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-5 py-4">
+        <div className={kanbanModalHeader}>
           <div className="min-w-0">
             <span
               className="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
@@ -248,18 +272,26 @@ function KanbanLeadModal({
             >
               {stageName}
             </span>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {staleAlert.level !== 'ok' ? (
+                <>
+                  <OperationalAlertBadge alert={staleAlert} size="md" />
+                  <span className={clsx('text-xs', kanbanTextMuted)}>{staleAlert.title}</span>
+                </>
+              ) : null}
+            </div>
             <h2
               id="kanban-lead-modal-title"
-              className="mt-2 text-lg font-semibold leading-snug text-slate-900 dark:text-slate-100"
+              className={clsx('mt-2 text-lg font-semibold leading-snug', kanbanTextPrimary)}
             >
               {card.title}
             </h2>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Negócio #{card.id}</p>
+            <p className={clsx('mt-1 text-xs', kanbanTextSubtle)}>Negócio #{card.id}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+            className={kanbanIconButton}
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -271,13 +303,13 @@ function KanbanLeadModal({
             {fields.map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
-                className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-900/50"
+                className={kanbanFieldCard}
               >
-                <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                <dt className={clsx('flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide', kanbanTextSubtle)}>
                   <Icon className="h-3.5 w-3.5" aria-hidden />
                   {label}
                 </dt>
-                <dd className="mt-1.5 text-sm leading-snug text-slate-800 dark:text-slate-200 wrap-break-word">{value}</dd>
+                <dd className={clsx('mt-1.5 text-sm leading-snug wrap-break-word', kanbanTextPrimary)}>{value}</dd>
               </div>
             ))}
           </dl>
@@ -292,7 +324,7 @@ function KanbanLeadModal({
               resetKey={card.id}
             />
           ) : (
-            <p className="border-t border-slate-100 px-5 py-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <p className={clsx('border-t border-indigo/10 px-5 py-4 text-xs dark:border-cloud/10', kanbanTextMuted)}>
               Você não tem permissão para transferir leads.
             </p>
           )}
@@ -338,32 +370,32 @@ function KanbanBatchModal({
       role="presentation"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]" aria-hidden />
+      <div className={kanbanModalBackdrop} aria-hidden />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="kanban-batch-modal-title"
-        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl"
+        className={kanbanModal}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-5 py-4">
+        <div className={kanbanModalHeader}>
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-200">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-indigo/10 px-3 py-1 text-xs font-semibold text-indigo dark:bg-indigo/15 dark:text-cream">
               <Users className="h-3.5 w-3.5" />
               Transferência em lote
             </div>
-            <h2 id="kanban-batch-modal-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <h2 id="kanban-batch-modal-title" className={clsx('text-lg font-semibold', kanbanTextPrimary)}>
               Transferir {count} lead{count === 1 ? '' : 's'}
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className={clsx('mt-1 text-sm', kanbanTextMuted)}>
               Escolha o corretor que passará a ser responsável por todas as negociações selecionadas.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300"
+            className={kanbanIconButton}
             aria-label="Fechar"
           >
             <X className="h-5 w-5" />
@@ -419,20 +451,23 @@ function KanbanDealCard({
     ? { transform: CSS.Translate.toString(transform) }
     : undefined
 
+  const staleAlert = getCardOperationalAlert(card)
+
   return (
     <article
       ref={isOverlay ? undefined : setNodeRef}
       style={{
         ...style,
-        borderLeftColor: stageColor,
-        boxShadow: isOverlay ? `0 10px 24px ${withAlpha(stageColor, 0.22)}` : undefined,
+        borderColor: withAlpha(stageColor, 0.28),
+        boxShadow: isOverlay ? `0 8px 20px ${withAlpha(stageColor, 0.18)}` : undefined,
       }}
       className={clsx(
-        'rounded-lg border border-slate-200 border-l-4 bg-white shadow-sm transition-all dark:border-slate-600/80 dark:bg-slate-800 dark:shadow-black/20',
+        'rounded-lg border shadow-sm transition-all dark:shadow-black/20',
+        kanbanSurface,
         (isDetailSelected || isBatchSelected) &&
-          'ring-2 ring-blue-500/40 ring-offset-1 dark:ring-offset-slate-900',
-        isBatchSelected && batchMode && 'bg-blue-50/40 dark:bg-blue-950/35',
-        isOverlay && 'rotate-1 ring-2 ring-white/80 dark:ring-slate-500/60',
+          'ring-2 ring-indigo/30 ring-offset-1 dark:ring-offset-[#212529]',
+        isBatchSelected && batchMode && 'bg-indigo/5 dark:bg-indigo/10',
+        isOverlay && 'rotate-1 ring-2 ring-white/80 dark:ring-indigo/40',
         isDragging && !isOverlay && 'opacity-35'
       )}
     >
@@ -441,19 +476,19 @@ function KanbanDealCard({
           <button
             type="button"
             onClick={() => onToggleBatch?.(card)}
-            className="mt-1 shrink-0 rounded p-0.5 text-blue-700 transition-colors hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/50"
+            className="mt-1 shrink-0 rounded p-0.5 text-indigo transition-colors hover:bg-indigo/10 dark:text-indigo-300 dark:hover:bg-indigo/15"
             aria-label={isBatchSelected ? 'Desmarcar lead' : 'Selecionar lead'}
           >
             {isBatchSelected ? (
               <CheckSquare className="h-4 w-4" />
             ) : (
-              <Square className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+              <Square className={clsx('h-4 w-4', kanbanTextSubtle)} />
             )}
           </button>
         ) : canDrag ? (
           <button
             type="button"
-            className="mt-1 shrink-0 cursor-grab rounded p-0.5 text-slate-300 dark:text-slate-600 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-500 dark:hover:text-slate-400 active:cursor-grabbing"
+            className={clsx('mt-1 shrink-0 cursor-grab rounded p-0.5 transition-colors hover:bg-indigo/5 active:cursor-grabbing dark:hover:bg-cloud/10', kanbanTextSubtle, 'hover:text-indigo dark:hover:text-cream/70')}
             aria-label={`Mover ${card.title}`}
             {...listeners}
             {...attributes}
@@ -469,12 +504,23 @@ function KanbanDealCard({
           onClick={() => (batchMode ? onToggleBatch?.(card) : onSelect?.(card))}
           className="min-w-0 flex-1 text-left"
         >
-          <h4 className="text-[13px] font-semibold leading-snug text-slate-900 dark:text-slate-100">{card.title}</h4>
-          <p className="mt-1 truncate text-xs text-slate-600 dark:text-slate-400">{card.assignedByName}</p>
-          <p className="mt-0.5 truncate text-[11px] text-slate-400 dark:text-slate-500">{card.diretoria}</p>
-          <div className="mt-1.5 space-y-0.5 text-[10px] leading-tight text-slate-400 dark:text-slate-500">
+          {staleAlert.level !== 'ok' ? (
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <OperationalAlertBadge alert={staleAlert} />
+              <span
+                className="truncate text-[10px] font-medium text-indigo/60 dark:text-cream/55"
+                title={staleAlert.title}
+              >
+                {staleAlert.title}
+              </span>
+            </div>
+          ) : null}
+          <h4 className={clsx('text-[13px] font-semibold leading-snug', kanbanTextPrimary)}>{card.title}</h4>
+          <p className={clsx('mt-1 truncate text-xs', kanbanTextSecondary)}>{card.assignedByName}</p>
+          <p className={clsx('mt-0.5 truncate text-[11px]', kanbanTextSubtle)}>{card.diretoria}</p>
+          <div className={clsx('mt-1.5 space-y-0.5 text-[10px] leading-tight', kanbanTextSubtle)}>
             <p>
-              <span className="font-medium text-slate-500 dark:text-slate-400">Entrada:</span>{' '}
+              <span className={clsx('font-medium', kanbanTextMuted)}>Entrada:</span>{' '}
               {formatBitrixDateOnly(card.dateCreate)}
             </p>
           </div>
@@ -487,7 +533,7 @@ function KanbanDealCard({
               {card.roleta}
             </span>
             <span
-              className="max-w-full truncate rounded-md bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-400"
+              className={clsx('max-w-full truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium', kanbanTextSecondary, 'bg-indigo/8 dark:bg-cloud/10')}
               title={card.source}
             >
               {card.source}
@@ -525,7 +571,7 @@ function KanbanColumn({
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const stageColor = getStageChartColor(stageIndex)
-  const columnBase = isDark ? '#1e293b' : '#f5f5f5'
+  const columnBase = isDark ? '#212529' : '#f8f9fa'
   const columnBodyTint = withAlpha(stageColor, isDark ? 0.1 : 0.03)
 
   const { setNodeRef, isOver } = useDroppable({
@@ -533,28 +579,39 @@ function KanbanColumn({
     data: { type: 'column', stageId: stage.id, boardCategoryId } satisfies DropData,
   })
 
+  const maxStaleDays = getColumnMaxStaleDays(stage.cards)
+  const columnStaleAlert =
+    maxStaleDays >= OPERATIONAL_ALERT_WARNING_DAYS ? getOperationalAlert(maxStaleDays) : null
+
   return (
     <section
       ref={setNodeRef}
       style={{
         boxShadow: isOver ? `0 0 0 2px ${withAlpha(stageColor, 0.35)}` : undefined,
       }}
-      className={clsx(
-        'flex w-[320px] shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-600/80 dark:bg-slate-900/60',
-        isOver && 'ring-2 ring-inset'
-      )}
+      className={clsx(kanbanColumn, isOver && 'ring-2 ring-inset')}
     >
       <header
-        className="border-b border-slate-200 dark:border-slate-600/80"
+        className="border-b border-indigo/10 dark:border-cloud/10"
         style={{
           background: `linear-gradient(180deg, ${withAlpha(stageColor, isDark ? 0.22 : 0.14)} 0%, ${columnBase} 100%)`,
         }}
       >
         <div className="h-2.5" style={{ backgroundColor: stageColor }} />
         <div className="flex items-start justify-between gap-2 px-3 py-3">
-          <h3 className="line-clamp-2 flex-1 text-sm font-semibold leading-snug text-slate-800 dark:text-slate-200">
-            {stage.name}
-          </h3>
+          <div className="min-w-0 flex-1">
+            <h3 className={clsx('line-clamp-2 text-sm font-semibold leading-snug', kanbanTextPrimary)}>
+              {stage.name}
+            </h3>
+            {columnStaleAlert ? (
+              <p
+                className={clsx('mt-1 text-[10px] font-medium', kanbanTextMuted)}
+                title={`Lead mais parado: ${columnStaleAlert.title}`}
+              >
+                ↑ {columnStaleAlert.shortLabel} parado
+              </p>
+            ) : null}
+          </div>
           <span
             className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums"
             style={{ backgroundColor: withAlpha(stageColor, 0.16), color: stageColor }}
@@ -572,7 +629,7 @@ function KanbanColumn({
         style={{ backgroundColor: columnBodyTint }}
       >
         {stage.cards.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-200 bg-white/80 px-2 py-10 text-center text-xs text-slate-400 dark:border-slate-600 dark:bg-slate-800/50 dark:text-slate-500">
+          <p className={clsx('rounded-lg border border-dashed border-indigo/15 bg-cloud/80 px-2 py-10 text-center text-xs dark:border-cloud/15 dark:bg-cloud/5', kanbanTextSubtle)}>
             Sem negociações
           </p>
         ) : (
@@ -655,8 +712,8 @@ function KanbanBoardView({
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="relative min-w-0 flex-1">
         {isMoving ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800/60 backdrop-blur-[1px]">
-            <Loader2 className="h-5 w-5 animate-spin text-blue-700" />
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-cloud/80 backdrop-blur-[1px] dark:bg-cloud/10">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo dark:text-indigo-300" />
           </div>
         ) : null}
 
@@ -943,7 +1000,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
 
   if (localBoards.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">Nenhuma fase disponível no CRM.</p>
+      <p className={clsx('py-10 text-center', kanbanEmpty)}>Nenhuma fase disponível no CRM.</p>
     )
   }
 
@@ -956,10 +1013,10 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
       ) : null}
 
       {batchMode ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50/80 px-4 py-3 dark:border-blue-800/60 dark:bg-blue-950/35 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl border border-indigo/15 bg-indigo/5 px-4 py-3 dark:border-indigo/25 dark:bg-indigo/10 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-blue-950 dark:text-blue-100">Modo lote ativo</p>
-            <p className="text-xs text-blue-800/80 dark:text-blue-300/80">
+            <p className="text-sm font-semibold text-indigo dark:text-cream">Modo lote ativo</p>
+            <p className="text-xs text-indigo/75 dark:text-cream/70">
               {batchCount === 0
                 ? 'Marque os leads que deseja transferir'
                 : `${batchCount} lead${batchCount === 1 ? '' : 's'} selecionado${batchCount === 1 ? '' : 's'}`}
@@ -970,7 +1027,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
               type="button"
               onClick={() => setBatchSelectedIds(new Set())}
               disabled={batchCount === 0}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-blue-900 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-blue-200 dark:hover:bg-blue-900/50"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-indigo transition-colors hover:bg-indigo/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-indigo-200 dark:hover:bg-indigo/15"
             >
               Limpar
             </button>
@@ -978,14 +1035,14 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
               type="button"
               onClick={() => setBatchModalOpen(true)}
               disabled={batchCount === 0 || assignBatchMutation.isPending}
-              className="rounded-lg bg-blue-900 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-950 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-cream transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Transferir em lote
             </button>
             <button
               type="button"
               onClick={handleCancelBatchMode}
-              className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-blue-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className={clsx('rounded-lg border border-indigo/15 bg-cloud px-3 py-2 text-sm font-medium transition-colors hover:bg-indigo/5 dark:border-indigo/20 dark:bg-cloud/5 dark:hover:bg-cloud/10', kanbanTextSecondary)}
             >
               Cancelar
             </button>
@@ -996,7 +1053,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
           <button
             type="button"
             onClick={handleStartBatchMode}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className={clsx('inline-flex items-center gap-2 rounded-lg border border-indigo/10 bg-cloud px-3 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-indigo/5 dark:border-cloud/15 dark:bg-cloud/5 dark:hover:bg-cloud/10', kanbanTextSecondary)}
           >
             <Users className="h-4 w-4" />
             Selecionar em lote
@@ -1007,7 +1064,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
       {localBoards.map((board) => (
         <div key={board.categoryId} className="space-y-3">
           {localBoards.length > 1 ? (
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{board.title}</h3>
+            <h3 className={clsx('text-sm font-semibold', kanbanTextPrimary)}>{board.title}</h3>
           ) : null}
 
           <KanbanBoardView
@@ -1048,7 +1105,7 @@ export function LeadsKanbanBoard({ boards, expanded = false }: Props) {
         />
       ) : null}
 
-      <p className="text-xs text-slate-400 dark:text-slate-500">
+      <p className={clsx('text-xs', kanbanTextSubtle)}>
         {batchMode
           ? 'Marque os cards desejados e use “Transferir em lote”'
           : canMoveEsteira && canTransferLeads

@@ -9,6 +9,7 @@ import {
 import type { BitrixStageDefinition, StageCatalog } from '@/api/bitrixStages'
 import { normalizeStageId } from '@/api/bitrixStages'
 import type { BitrixLead, KanbanBoard, KanbanCard, KanbanStage } from '@/api/types'
+import { compareCardsByStaleness } from '@/utils/operationalAlert'
 
 function resolveSourceLabel(sourceId: string, sourceLabels: Record<string, string>): string {
   if (!sourceId) return 'Sem origem'
@@ -76,9 +77,7 @@ function buildBoard(
     sort: stage.sort,
     categoryId: stage.categoryId,
     semantics: stage.semantics,
-    cards: (cardsByStage.get(stage.statusId) ?? []).sort(
-      (a, b) => new Date(b.dateCreate).getTime() - new Date(a.dateCreate).getTime()
-    ),
+    cards: (cardsByStage.get(stage.statusId) ?? []).sort(compareCardsByStaleness),
   }))
 
   return {

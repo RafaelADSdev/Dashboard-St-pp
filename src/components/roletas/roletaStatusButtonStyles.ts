@@ -1,6 +1,31 @@
 import type { RoletaOperationalStatus } from '@/api/types'
 import type { RoletaStatusFilter } from '@/utils/filterRoletas'
 
+/** Badge / dot / contagem — mesma escala semântica de operationalAlert (ok → warning → critical). */
+export const roletaStatusBadgeStyles: Record<
+  RoletaOperationalStatus,
+  { badge: string; dot: string; count: string }
+> = {
+  ativa: {
+    badge:
+      'bg-emerald-50 text-emerald-800 ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/30',
+    dot: 'bg-emerald-500',
+    count: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200',
+  },
+  nova: {
+    badge:
+      'bg-amber-50 text-amber-900 ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-100 dark:ring-amber-500/30',
+    dot: 'bg-amber-500',
+    count: 'bg-amber-50 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100',
+  },
+  suspensa: {
+    badge:
+      'bg-red-50 text-red-800 ring-red-200/80 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-500/30',
+    dot: 'bg-red-500',
+    count: 'bg-red-50 text-red-800 dark:bg-red-500/15 dark:text-red-200',
+  },
+}
+
 export type StatusButtonStyles = {
   button: { selected: string; unselected: string }
   badge: { selected: string; unselected: string }
@@ -34,13 +59,13 @@ export const roletaOperationalStatusStyles: Record<RoletaOperationalStatus, Stat
   suspensa: {
     button: {
       selected:
-        'border-rose-300 bg-rose-50 text-rose-800 shadow-sm dark:border-rose-400/40 dark:bg-rose-500/15 dark:text-rose-200',
+        'border-red-300 bg-red-50 text-red-800 shadow-sm dark:border-red-400/40 dark:bg-red-500/15 dark:text-red-200',
       unselected:
-        'border-rose-200 bg-rose-50/60 text-rose-700 hover:border-rose-300 hover:bg-rose-50 dark:border-rose-500/25 dark:bg-rose-500/8 dark:text-rose-300 dark:hover:bg-rose-500/12',
+        'border-red-200 bg-red-50/60 text-red-700 hover:border-red-300 hover:bg-red-50 dark:border-red-500/25 dark:bg-red-500/8 dark:text-red-300 dark:hover:bg-red-500/12',
     },
     badge: {
-      selected: 'bg-rose-100 text-rose-800 dark:bg-rose-500/25 dark:text-rose-100',
-      unselected: 'bg-rose-100/80 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+      selected: 'bg-red-100 text-red-800 dark:bg-red-500/25 dark:text-red-100',
+      unselected: 'bg-red-100/80 text-red-700 dark:bg-red-500/15 dark:text-red-300',
     },
   },
 }
@@ -62,7 +87,7 @@ export const roletaStatusFilterStyles: Record<RoletaStatusFilter, StatusButtonSt
 }
 
 export const roletaStatusDotStyles: Record<RoletaOperationalStatus, string> = {
-  ativa: 'bg-emerald-500',
-  nova: 'bg-amber-500',
-  suspensa: 'bg-rose-400',
+  ativa: roletaStatusBadgeStyles.ativa.dot,
+  nova: roletaStatusBadgeStyles.nova.dot,
+  suspensa: roletaStatusBadgeStyles.suspensa.dot,
 }

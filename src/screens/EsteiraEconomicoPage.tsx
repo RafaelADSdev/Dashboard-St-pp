@@ -18,6 +18,13 @@ import { ChartCard } from '@/components/ui/ChartCard'
 import { FilterApplyingOverlay } from '@/components/ui/FilterApplyingOverlay'
 import { ErrorState, LoadingState } from '@/components/ui/StatusMessage'
 import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
+import {
+  countKanbanAlerts,
+  getKanbanBoardsAlertLevel,
+  KPI_HINT_ALERT_CLASSES,
+  KPI_VALUE_ALERT_CLASSES,
+} from '@/utils/operationalAlert'
+import { useMemo } from 'react'
 
 function EsteiraEconomicoFilters() {
   return (
@@ -34,6 +41,14 @@ export function EsteiraEconomicoPage() {
   const applied = useAppliedFilters()
   const { data, isLoading, isFetching, isPending, isError } = useLeadsData(applied, { esteira: 'ECONOMICO' })
   const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
+  const alertCount = useMemo(
+    () => countKanbanAlerts(data?.kanbanBoards ?? []),
+    [data?.kanbanBoards]
+  )
+  const kanbanAlertLevel = useMemo(
+    () => getKanbanBoardsAlertLevel(data?.kanbanBoards ?? []),
+    [data?.kanbanBoards]
+  )
 
   return (
     <>
@@ -55,7 +70,15 @@ export function EsteiraEconomicoPage() {
             <FilterApplyingOverlay isActive={isApplyingFilters}>
               <div className="space-y-5">
                 <div className="max-w-sm">
-                  <KPICard label="Comercial Econômico" value={data?.economicoCount ?? 0} color="indigo" />
+                  <KPICard
+                    label="Comercial Econômico"
+                    value={data?.economicoCount ?? 0}
+                    color="indigo"
+                    alertLevel={kanbanAlertLevel}
+                    valueClassName={KPI_VALUE_ALERT_CLASSES[kanbanAlertLevel]}
+                    secondaryHint={alertCount > 0 ? `· ${alertCount} em alerta` : undefined}
+                    secondaryHintClassName={KPI_HINT_ALERT_CLASSES[kanbanAlertLevel]}
+                  />
                 </div>
 
                 <ChartCard

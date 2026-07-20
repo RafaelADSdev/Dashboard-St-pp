@@ -121,9 +121,9 @@ export const ROLETA_KANBAN_COLUMNS: {
   label: string
   headerClass: string
 }[] = [
-  { status: 'nova', label: ROLETA_BITRIX_STAGE_NAMES.nova, headerClass: 'bg-sky-500' },
+  { status: 'nova', label: ROLETA_BITRIX_STAGE_NAMES.nova, headerClass: 'bg-amber-500' },
   { status: 'ativa', label: ROLETA_BITRIX_STAGE_NAMES.ativa, headerClass: 'bg-emerald-500' },
-  { status: 'suspensa', label: ROLETA_BITRIX_STAGE_NAMES.suspensa, headerClass: 'bg-orange-500' },
+  { status: 'suspensa', label: ROLETA_BITRIX_STAGE_NAMES.suspensa, headerClass: 'bg-red-500' },
 ]
 
 export const ROLETA_STATUS_ORDER: RoletaOperationalStatus[] = [...ROLETA_KANBAN_COLUMN_ORDER]

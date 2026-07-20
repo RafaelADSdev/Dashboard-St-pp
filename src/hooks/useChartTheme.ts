@@ -13,26 +13,26 @@ export function useChartTheme() {
 
   return {
     isDark,
-    grid: isDark ? '#334155' : '#f1f5f9',
-    tick: isDark ? '#94a3b8' : '#64748b',
-    tickSecondary: isDark ? '#cbd5e1' : '#475569',
+    grid: isDark ? '#5c636a' : '#e9ecef',
+    tick: isDark ? '#adb5bd' : '#6c757d',
+    tickSecondary: isDark ? '#d8dce8' : '#343b56',
     tooltip: {
       borderRadius: '12px',
-      border: '1px solid #e2e8f0',
-      backgroundColor: '#f5f5f5',
-      color: '#0f172a',
-      boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+      border: isDark ? '1px solid rgba(245,245,245,0.12)' : '1px solid rgba(33,40,66,0.1)',
+      backgroundColor: isDark ? '#212529' : '#f8f9fa',
+      color: isDark ? '#f8f9fa' : '#343a40',
+      boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.35)' : '0 4px 12px rgba(33,40,66,0.1)',
       fontSize: '13px',
     },
     tooltipLabel: {
-      color: '#0f172a',
+      color: isDark ? '#f8f9fa' : '#343a40',
       fontWeight: 600,
       marginBottom: 4,
     },
     tooltipItem: {
-      color: '#334155',
+      color: isDark ? '#e9ecef' : '#6c757d',
     },
-    cursor: isDark ? '#1e293b' : '#f8fafc',
+    cursor: isDark ? 'rgba(50,59,94,0.35)' : 'rgba(33,40,66,0.06)',
     apexTheme: (isDark ? 'dark' : 'light') as 'dark' | 'light',
   }
 }
