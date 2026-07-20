@@ -4,7 +4,10 @@ import {
   addCorretorToRoleta,
   removeCorretorFromRoleta,
 } from '@/api/bitrixRoletaMutations'
-import { getCachedOrgStructure } from '@/lib/server/cachedBitrix'
+import {
+  getCachedOrgStructure,
+  invalidateDistributedRoletaMembership,
+} from '@/lib/server/cachedBitrix'
 import { requireUserPermission } from '@/lib/supabase/access'
 import { getMetaBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
 import {
@@ -69,6 +72,7 @@ export async function POST(
       corretorName: body.corretorName.trim(),
     })
 
+    await invalidateDistributedRoletaMembership()
     revalidateTag('stupp-roleta-corretores', 'max')
 
     return NextResponse.json({ ok: true, recordId, roletaId })
@@ -112,6 +116,7 @@ export async function DELETE(
     }
 
     await removeCorretorFromRoleta(webhookUrl, body.recordId)
+    await invalidateDistributedRoletaMembership()
     revalidateTag('stupp-roleta-corretores', 'max')
 
     return NextResponse.json({ ok: true })

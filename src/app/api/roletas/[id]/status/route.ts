@@ -4,6 +4,7 @@ import { updateRoletaStatus } from '@/api/bitrixRoletaMutations'
 import type { RoletaOperationalStatus } from '@/lib/roletaStatus'
 import { requireUserPermission } from '@/lib/supabase/access'
 import { getMetaBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
+import { invalidateDistributedRoletasCatalog } from '@/lib/server/cachedBitrix'
 import {
   BITRIX_PAUSED_MESSAGE,
   bitrixRouteErrorStatus,
@@ -51,6 +52,7 @@ export async function POST(
     }
 
     await updateRoletaStatus(webhookUrl, id, body.status)
+    await invalidateDistributedRoletasCatalog()
     revalidateTag('stupp-roletas-catalog', 'max')
 
     return NextResponse.json({ ok: true, status: body.status })

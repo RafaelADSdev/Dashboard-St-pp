@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import {
   ArrowLeft,
   Loader2,
+  Pencil,
   Shield,
   Trash2,
   UserPlus,
@@ -22,6 +23,7 @@ import {
 import type { CreateAccessPayload, UserEsteira, UserPermission, UserProfile, UserVisao } from '@/types/access'
 import { ESTEIRA_OPTIONS, PERMISSION_OPTIONS, PERMISSION_LABELS, VISAO_OPTIONS } from '@/types/access'
 import { formatPermissionsSummary } from '@/lib/userPermissions'
+import { EditAccessModal } from '@/components/acessos/EditAccessModal'
 
 const fieldLabelClass =
   'mb-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500'
@@ -100,6 +102,7 @@ export function AccessManagementPage() {
   const [loadingList, setLoadingList] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -245,6 +248,11 @@ export function AccessManagementPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function handleEditSaved() {
+    setSuccess('Acesso atualizado com sucesso.')
+    await loadProfiles()
   }
 
   async function handleDelete(userId: string) {
@@ -607,19 +615,29 @@ export function AccessManagementPage() {
                       {formatPermissionsSummary(item, PERMISSION_LABELS)}
                     </td>
                     <td className="px-3 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(item.id)}
-                        disabled={deletingId === item.id}
-                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                      >
-                        {deletingId === item.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                        Excluir
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingProfile(item)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-violet-700 transition hover:bg-violet-50 dark:text-violet-300 dark:hover:bg-violet-500/10"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(item.id)}
+                          disabled={deletingId === item.id}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {deletingId === item.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -628,6 +646,14 @@ export function AccessManagementPage() {
           </div>
         )}
       </section>
+
+      {editingProfile ? (
+        <EditAccessModal
+          profile={editingProfile}
+          onClose={() => setEditingProfile(null)}
+          onSaved={handleEditSaved}
+        />
+      ) : null}
     </div>
   )
 }

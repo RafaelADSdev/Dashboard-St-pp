@@ -237,7 +237,7 @@ flowchart LR
 1. Login via Supabase Auth (middleware protege rotas e APIs).
 2. Cliente chama `/api/dashboard` ou `/api/roletas/stats` com filtros aplicados.
 3. Servidor usa cache (`unstable_cache`) para org, fases, fontes e catálogo de roletas.
-4. Deals e contagens são buscados em paralelo no Bitrix; volumes grandes usam **split automático** por esteira e intervalo de datas.
+4. Deals são buscados por esteira em sequência, com paginação por `ID` e `start=-1`, sem solicitar a contagem total ao Bitrix.
 5. Agregação no servidor (`aggregateLeadsData`, `buildRoletasData`) → JSON pronto para UI e exportação.
 
 ---
@@ -464,10 +464,12 @@ Detalhes em `src/lib/bitrixDealDates.ts`.
 |------------|---------|
 | API única por tela | Uma requisição HTTP por carregamento de dashboard |
 | Cache longo | Org, fases, fontes e catálogo de roletas — **24 h** |
-| Cache curto | Dashboard agregado — **10 s** |
-| Filtro no Bitrix | `ASSIGNED_BY_ID` e roleta enviados na query quando aplicável |
-| Split de volume | Acima de 500 registros: divisão por esteira e datas |
-| Retry | Requisições repetidas em rate limit ou timeout |
+| Cache curto | Dashboard agregado — **5 min** |
+| Redis distribuído | Upstash compartilha cache e locks entre instâncias da Vercel; fallback automático para o cache do Next.js |
+| Filtro no Bitrix | Comparação exata por categoria, responsável e roleta quando aplicável |
+| Paginação sem contagem | `start=-1`, ordenação por `ID` e continuação com `ID > último ID` |
+| Deduplicação | Consultas idênticas simultâneas ou em até 10 s compartilham a mesma resposta |
+| Rate limit | Sem retry/failover automático de uma requisição bloqueada |
 | `placeholderData` | Dados anteriores visíveis enquanto novos filtros carregam |
 | Pausa de emergência | `BITRIX_PAUSED=true` interrompe chamadas sem derrubar o app |
 

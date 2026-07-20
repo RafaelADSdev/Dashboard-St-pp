@@ -61,7 +61,7 @@ export function LoginForm() {
       {/* Fundo imersivo — lado direito */}
       <div className="login-bg-glow pointer-events-none fixed inset-0 z-0" aria-hidden />
       <div
-        className="pointer-events-none fixed inset-0 z-[1] bg-linear-to-br from-[#080f1a]/75 via-[#0c1222]/55 to-[#1e3a5f]/45"
+        className="pointer-events-none fixed inset-0 z-[1] bg-linear-to-br from-[#1a1f33]/75 via-[#212842]/55 to-[#323b5e]/45"
         aria-hidden
       />
       <div
@@ -99,7 +99,7 @@ export function LoginForm() {
       <div
         className={clsx(
           'fixed inset-y-0 left-0 z-[3] flex w-full flex-col justify-center',
-          'border-r border-white/8 bg-[#080f1a]/62 px-7 py-10 shadow-[20px_0_60px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150',
+          'border-r border-white/8 bg-[#212842]/62 px-7 py-10 shadow-[20px_0_60px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150',
           'sm:min-w-[340px] sm:max-w-[38%] sm:px-[52px] sm:py-14'
         )}
       >

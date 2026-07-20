@@ -9,36 +9,50 @@ import {
 } from './buildRoletasData'
 import { getDealsBitrixWebhookCandidates, hasSplitBitrixWebhooks } from './bitrixWebhook'
 import { getCachedOrgStructure, getCachedStuppRoletasCatalog } from './cachedBitrix'
+import {
+  buildDistributedCacheKey,
+  withDistributedCache,
+} from './distributedCache'
 
 export function getCachedRoletasDashboard(filters: FilterParams) {
+  const distributedKey = buildDistributedCacheKey(
+    'bitrix:roletas-dashboard:v8',
+    filters
+  )
+
   return unstable_cache(
-    async () => {
-      const [roletas, org] = await Promise.all([
-        getCachedStuppRoletasCatalog(),
-        getCachedOrgStructure(),
-      ])
+    async () =>
+      withDistributedCache(
+        distributedKey,
+        DASHBOARD_SYNC_SECONDS,
+        async () => {
+          const [roletas, org] = await Promise.all([
+            getCachedStuppRoletasCatalog(),
+            getCachedOrgStructure(),
+          ])
 
-      const catalogDashboard = buildRoletasDashboardFromCatalog(roletas)
+          const catalogDashboard = buildRoletasDashboardFromCatalog(roletas)
 
-      if (roletas.length === 0) {
-        return catalogDashboard
-      }
+          if (roletas.length === 0) {
+            return catalogDashboard
+          }
 
-      const leadCounts = await buildRoletasLeadCounts(
-        getDealsBitrixWebhookCandidates(),
-        filters,
-        org,
-        roletas,
-        getCategoryIdsForEsteira('TODAS'),
-        !hasSplitBitrixWebhooks()
-      )
+          const leadCounts = await buildRoletasLeadCounts(
+            getDealsBitrixWebhookCandidates(),
+            filters,
+            org,
+            roletas,
+            getCategoryIdsForEsteira('TODAS'),
+            !hasSplitBitrixWebhooks()
+          )
 
-      return {
-        ...catalogDashboard,
-        totalLeads: leadCounts.totalLeads,
-        roletas: mergeCatalogWithLeadCounts(roletas, leadCounts.roletas),
-      }
-    },
+          return {
+            ...catalogDashboard,
+            totalLeads: leadCounts.totalLeads,
+            roletas: mergeCatalogWithLeadCounts(roletas, leadCounts.roletas),
+          }
+        }
+      ),
     [
       'roletas-dashboard-v7',
       filters.dateFrom,

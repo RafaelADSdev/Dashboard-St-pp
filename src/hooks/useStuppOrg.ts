@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { OrgPreview } from '@/lib/orgPreview'
+import { STUPP_ORG_QUERY_KEY } from '@/lib/queryKeys'
 
 async function fetchOrgPreview(): Promise<OrgPreview> {
   const res = await fetch('/api/org')
@@ -14,9 +15,10 @@ async function fetchOrgPreview(): Promise<OrgPreview> {
 
 export function useStuppStructurePreview() {
   return useQuery({
-    queryKey: ['stupp-org', 'v2'],
+    queryKey: STUPP_ORG_QUERY_KEY,
     queryFn: fetchOrgPreview,
     staleTime: 1000 * 60 * 60 * 24,
+    retry: 0,
   })
 }
 

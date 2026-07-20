@@ -1,13 +1,12 @@
 import { assertBitrixNotPaused } from '@/lib/server/bitrixPaused'
 
 export const BITRIX_REQUEST_TIMEOUT_MS = 45_000
-export const BITRIX_MAX_RETRIES = 1
+export const BITRIX_MAX_RETRIES = 0
+const READ_DEDUP_TTL_MS = 10_000
 
 let nextWebhookStartIndex = 0
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+const inFlightReads = new Map<string, Promise<unknown>>()
+const recentReads = new Map<string, { expiresAt: number; value: unknown }>()
 
 function isRateLimitMessage(message: string, status: number): boolean {
   return (
@@ -18,13 +17,34 @@ function isRateLimitMessage(message: string, status: number): boolean {
   )
 }
 
-function isRateLimitedError(error: Error): boolean {
-  return Boolean((error as Error & { rateLimited?: boolean }).rateLimited)
-}
-
 function markRateLimited(error: Error): Error {
   ;(error as Error & { rateLimited?: boolean }).rateLimited = true
   return error
+}
+
+function isReadMethod(method: string): boolean {
+  return (
+    method.endsWith('.get') ||
+    method.endsWith('.list') ||
+    method.endsWith('.items')
+  )
+}
+
+function buildReadKey(method: string, body: Record<string, unknown>): string {
+  return `${method}:${JSON.stringify(body)}`
+}
+
+function pruneReadCache(now: number): void {
+  if (recentReads.size < 500) return
+
+  for (const [key, entry] of recentReads) {
+    if (entry.expiresAt <= now) recentReads.delete(key)
+  }
+
+  if (recentReads.size >= 500) {
+    const oldestKey = recentReads.keys().next().value
+    if (oldestKey) recentReads.delete(oldestKey)
+  }
 }
 
 async function bitrixPostOnce<T>(
@@ -53,7 +73,6 @@ async function bitrixPostOnce<T>(
         const rateLimited = isRateLimitMessage(msg, res.status)
 
         if (rateLimited && attempt < retries) {
-          await sleep((attempt + 1) * 2000)
           continue
         }
 
@@ -66,7 +85,6 @@ async function bitrixPostOnce<T>(
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         if (attempt < retries) {
-          await sleep((attempt + 1) * 2000)
           continue
         }
         throw markRateLimited(
@@ -107,24 +125,38 @@ export async function bitrixPost<T>(
     throw new Error('Nenhum webhook Bitrix configurado')
   }
 
-  const orderedCandidates = rotateWebhookCandidates(candidates)
-  const retriesPerWebhook = orderedCandidates.length > 1 ? 0 : retries
-  let lastError: Error | null = null
+  const webhookUrl = rotateWebhookCandidates(candidates)[0]
+  const execute = () =>
+    bitrixPostOnce<T>(webhookUrl, method, body, Math.min(retries, BITRIX_MAX_RETRIES))
 
-  for (const webhookUrl of orderedCandidates) {
-    try {
-      return await bitrixPostOnce<T>(webhookUrl, method, body, retriesPerWebhook)
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error))
-      lastError = err
-
-      if (!isRateLimitedError(err) || webhookUrl === orderedCandidates.at(-1)) {
-        throw err
-      }
-
-      await sleep(250)
-    }
+  if (!isReadMethod(method)) {
+    return execute()
   }
 
-  throw lastError ?? new Error('Bitrix API error: limite de requisicoes excedido')
+  const now = Date.now()
+  pruneReadCache(now)
+  const key = buildReadKey(method, body)
+  const cached = recentReads.get(key)
+  if (cached && cached.expiresAt > now) {
+    return cached.value as T
+  }
+  if (cached) recentReads.delete(key)
+
+  const pending = inFlightReads.get(key)
+  if (pending) return pending as Promise<T>
+
+  const request = execute()
+    .then((value) => {
+      recentReads.set(key, {
+        expiresAt: Date.now() + READ_DEDUP_TTL_MS,
+        value,
+      })
+      return value
+    })
+    .finally(() => {
+      inFlightReads.delete(key)
+    })
+
+  inFlightReads.set(key, request)
+  return request
 }

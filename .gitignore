@@ -33,3 +33,4 @@ tsconfig.tsbuildinfo
 
 # Acessos do .project (referências locais — não commitar)
 .project/ACESSOS.md
+.env*.local

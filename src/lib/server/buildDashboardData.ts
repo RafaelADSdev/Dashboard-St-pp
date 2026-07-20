@@ -4,31 +4,36 @@ import { getCategoryIdsForEsteira } from '@/api/bitrixConfig'
 import type { FilterParams, LeadsDashboardData } from '@/api/types'
 import { getEquipeOptions, resolveAssignedByIds } from '@/lib/orgPreview'
 import { aggregateLeadsData } from '@/utils/aggregateLeads'
+import { countCorretoresAtivosRoleta } from '@/utils/countCorretoresAtivosRoleta'
 import { getDealsBitrixWebhookCandidates, hasSplitBitrixWebhooks } from './bitrixWebhook'
 import {
   getCachedOrgStructure,
+  getCachedRoletaCorretoresMembership,
   getCachedSourceLabels,
   getCachedStageCatalog,
-  getCachedStuppRoletas,
+  getCachedStuppRoletasCatalog,
 } from './cachedBitrix'
 
 async function loadDashboardMetadata() {
-  if (hasSplitBitrixWebhooks()) {
-    const [org, stageCatalog, roletas, sourceLabels] = await Promise.all([
-      getCachedOrgStructure(),
-      getCachedStageCatalog(),
-      getCachedStuppRoletas(),
-      getCachedSourceLabels(),
-    ])
-    return { org, stageCatalog, roletas, sourceLabels }
-  }
-
   const org = await getCachedOrgStructure()
   const stageCatalog = await getCachedStageCatalog()
-  const roletas = await getCachedStuppRoletas()
+  const roletasCatalog = await getCachedStuppRoletasCatalog()
+  const roletas = roletasCatalog.filter((roleta) => roleta.isActive)
+  const roletaMembership = await getCachedRoletaCorretoresMembership()
   const sourceLabels = await getCachedSourceLabels()
 
-  return { org, stageCatalog, roletas, sourceLabels }
+  return {
+    org,
+    stageCatalog,
+    roletas,
+    roletasCatalog,
+    roletaMembership,
+    sourceLabels,
+    corretoresAtivosRoleta: countCorretoresAtivosRoleta(
+      roletasCatalog,
+      roletaMembership.membershipByRoletaId
+    ),
+  }
 }
 
 export async function buildDashboardData(filters: FilterParams): Promise<LeadsDashboardData> {
@@ -36,7 +41,8 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
   const categoryIds = getCategoryIdsForEsteira(filters.esteira)
   const sequentialCategories = !hasSplitBitrixWebhooks()
 
-  const { org, stageCatalog, roletas, sourceLabels } = await loadDashboardMetadata()
+  const { org, stageCatalog, roletas, sourceLabels, corretoresAtivosRoleta } =
+    await loadDashboardMetadata()
 
   const equipeOptions = getEquipeOptions(org)
   const assignedByIds = resolveAssignedByIds(org, {
@@ -49,7 +55,10 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
   const hasRoletaFilter = Boolean(filters.roleta)
 
   if ((hasUserFilter && assignedByIds.length === 0) || (hasRoletaFilter && !roletaTitle)) {
-    return aggregateLeadsData([], filters, stageCatalog, org, equipeOptions, sourceLabels)
+    return {
+      ...aggregateLeadsData([], filters, stageCatalog, org, equipeOptions, sourceLabels),
+      corretoresAtivosRoleta,
+    }
   }
 
   const bitrixLeads = await fetchLeadsFromBitrix(dealsWebhooks, {
@@ -63,12 +72,15 @@ export async function buildDashboardData(filters: FilterParams): Promise<LeadsDa
     sequentialCategories,
   })
 
-  return aggregateLeadsData(
-    bitrixLeads,
-    filters,
-    stageCatalog,
-    org,
-    equipeOptions,
-    sourceLabels
-  )
+  return {
+    ...aggregateLeadsData(
+      bitrixLeads,
+      filters,
+      stageCatalog,
+      org,
+      equipeOptions,
+      sourceLabels
+    ),
+    corretoresAtivosRoleta,
+  }
 }

@@ -7,6 +7,10 @@ import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import type { LeadsDashboardData, StuppRoletaOption } from '@/api/types'
 import type { OrgPreview } from '@/lib/orgPreview'
+import {
+  STUPP_ORG_QUERY_KEY,
+  STUPP_ROLETAS_QUERY_KEY,
+} from '@/lib/queryKeys'
 import { useAppliedFilters } from '@/store/filterStore'
 import {
   buildExportContext,
@@ -58,8 +62,10 @@ export function ExportButton() {
       return
     }
 
-    const org = queryClient.getQueryData<OrgPreview>(['stupp-org'])
-    const catalog = queryClient.getQueryData<{ roletas: StuppRoletaOption[] }>(['stupp-roletas'])
+    const org = queryClient.getQueryData<OrgPreview>(STUPP_ORG_QUERY_KEY)
+    const catalog = queryClient.getQueryData<{ roletas: StuppRoletaOption[] }>(
+      STUPP_ROLETAS_QUERY_KEY
+    )
     const roletas = catalog?.roletas
 
     setExporting(format)

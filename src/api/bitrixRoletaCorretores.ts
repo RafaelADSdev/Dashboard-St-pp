@@ -10,6 +10,7 @@ export const ROLETA_CORRETOR_CARGO_FIELD = 'ufCrm11_1714673477606'
 export const ROLETA_CORRETOR_DIRETOR_FIELD = 'ufCrm11_1738080141'
 export const ROLETA_CORRETOR_USER_FIELD = 'ufCrm11_1738081725'
 export const ROLETA_CORRETOR_ROLETA_NAME_FIELD = 'ufCrm11_1738081783'
+const PAGE_SIZE = 50
 
 export const ROLETA_CARGO_LABELS: Record<string, string> = {
   '1597': 'Superintendente',
@@ -173,39 +174,49 @@ function enrichCorretorMember(
 }
 
 export async function fetchRoletaCorretorItems(
-  webhookUrl: BitrixWebhookRef
+  webhookUrl: BitrixWebhookRef,
+  roletaTitles: string[]
 ): Promise<BitrixRoletaCorretorItem[]> {
   const all: BitrixRoletaCorretorItem[] = []
-  let start = 0
+  const exactTitles = [...new Set(roletaTitles.map(normalizeTitle).filter(Boolean))]
 
-  while (true) {
-    const data = await bitrixPost<{
-      result?: { items?: BitrixRoletaCorretorItem[] }
-      next?: number
-    }>(webhookUrl, 'crm.item.list', {
-      entityTypeId: ROLETA_CORRETOR_ENTITY_TYPE_ID,
-      filter: { [`%${ROLETA_CORRETOR_ROLETA_NAME_FIELD}`]: 'Stüpp' },
-      select: [
-        'id',
-        'title',
-        ROLETA_CORRETOR_NAME_FIELD,
-        ROLETA_CORRETOR_CARGO_FIELD,
-        ROLETA_CORRETOR_DIRETOR_FIELD,
-        ROLETA_CORRETOR_USER_FIELD,
-        ROLETA_CORRETOR_ROLETA_NAME_FIELD,
-      ],
-      order: { id: 'ASC' },
-      start,
-    })
+  for (let index = 0; index < exactTitles.length; index += PAGE_SIZE) {
+    const titleChunk = exactTitles.slice(index, index + PAGE_SIZE)
+    let lastId = 0
 
-    all.push(...(data.result?.items ?? []))
+    while (true) {
+      const data = await bitrixPost<{
+        result?: { items?: BitrixRoletaCorretorItem[] }
+      }>(webhookUrl, 'crm.item.list', {
+        entityTypeId: ROLETA_CORRETOR_ENTITY_TYPE_ID,
+        filter: {
+          [`@${ROLETA_CORRETOR_ROLETA_NAME_FIELD}`]: titleChunk,
+          ...(lastId > 0 ? { '>id': lastId } : {}),
+        },
+        select: [
+          'id',
+          'title',
+          ROLETA_CORRETOR_NAME_FIELD,
+          ROLETA_CORRETOR_CARGO_FIELD,
+          ROLETA_CORRETOR_DIRETOR_FIELD,
+          ROLETA_CORRETOR_USER_FIELD,
+          ROLETA_CORRETOR_ROLETA_NAME_FIELD,
+        ],
+        order: { id: 'ASC' },
+        start: -1,
+      })
 
-    if (data.next === undefined) break
-    start = data.next
-    await sleep(100)
+      const batch = data.result?.items ?? []
+      all.push(...batch)
+
+      if (batch.length < PAGE_SIZE) break
+      lastId = Math.max(...batch.map((item) => Number(item.id)).filter(Boolean))
+      if (!lastId) break
+      await sleep(100)
+    }
   }
 
-  return all
+  return [...new Map(all.map((item) => [String(item.id), item])).values()]
 }
 
 export function buildRoletaMembershipIndex(

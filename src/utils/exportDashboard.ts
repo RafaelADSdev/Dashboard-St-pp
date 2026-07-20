@@ -180,9 +180,9 @@ export interface PdfTableSection {
 function kpiRows(ctx: ExportContext): (string | number)[][] {
   if (ctx.esteira === 'TODAS') {
     return filterRowsByValue([
-      ['Total de leads', ctx.data.totalLeads],
-      ['Comercial Econômico', ctx.data.economicoCount],
-      ['Comercial Geral', ctx.data.geralCount],
+      ['Leads recebidos', ctx.data.totalLeads],
+      ['Leads perdidos', ctx.data.leadsPerdidos],
+      ['Corretores ativos roleta', ctx.data.corretoresAtivosRoleta],
     ])
   }
 

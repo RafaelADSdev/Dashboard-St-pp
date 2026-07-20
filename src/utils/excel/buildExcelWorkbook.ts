@@ -160,9 +160,9 @@ function buildSummarySheet(ctx: ExportContext, tableNames: string[]): XLSX.WorkS
   const kpis: { label: string; value: number }[] =
     ctx.esteira === 'TODAS'
       ? [
-          { label: 'Total de leads', value: ctx.data.totalLeads },
-          { label: 'Comercial Econômico', value: ctx.data.economicoCount },
-          { label: 'Comercial Geral', value: ctx.data.geralCount },
+          { label: 'Leads recebidos', value: ctx.data.totalLeads },
+          { label: 'Leads perdidos', value: ctx.data.leadsPerdidos },
+          { label: 'Corretores ativos roleta', value: ctx.data.corretoresAtivosRoleta },
         ]
       : ctx.esteira === 'GERAL'
         ? [{ label: 'Comercial Geral', value: ctx.data.geralCount }]

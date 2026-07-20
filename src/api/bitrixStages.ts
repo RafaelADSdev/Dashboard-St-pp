@@ -94,6 +94,19 @@ export function groupByStageOrdered(
   return result
 }
 
+export function isLeadInFailureStage(
+  lead: { stage_id: string; category_id?: string },
+  definitions: BitrixStageDefinition[]
+): boolean {
+  const categoryId = lead.category_id ?? ''
+  const normalized = normalizeStageId(lead.stage_id, categoryId)
+  const stage = definitions.find(
+    (item) => item.statusId === normalized || item.statusId === lead.stage_id
+  )
+
+  return stage?.semantics === 'F'
+}
+
 export function groupByStageBreakdown(
   leads: { stage_id: string }[],
   definitions: BitrixStageDefinition[],

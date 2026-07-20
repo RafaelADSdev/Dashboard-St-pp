@@ -19,7 +19,7 @@ export function useChartTheme() {
     tooltip: {
       borderRadius: '12px',
       border: '1px solid #e2e8f0',
-      backgroundColor: '#ffffff',
+      backgroundColor: '#f5f5f5',
       color: '#0f172a',
       boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
       fontSize: '13px',

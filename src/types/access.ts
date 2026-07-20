@@ -30,6 +30,16 @@ export interface CreateAccessPayload {
   permissions: UserPermission[]
 }
 
+export interface UpdateAccessPayload {
+  id: string
+  visao: UserVisao
+  esteira: UserEsteira
+  diretoriaIds: string[]
+  equipeId?: string | null
+  permissions: UserPermission[]
+  password?: string
+}
+
 export const VISAO_OPTIONS: { value: UserVisao; label: string }[] = [
   { value: 'admin', label: 'Admin' },
   { value: 'diretor', label: 'Diretor' },

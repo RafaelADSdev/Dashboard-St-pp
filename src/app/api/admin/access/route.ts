@@ -7,8 +7,9 @@ import {
   requireAdminUser,
   resolveAccessUsername,
 } from '@/lib/supabase/access'
+import { emailToUsername } from '@/lib/supabase/username'
 import { getCachedOrgStructure } from '@/lib/server/cachedBitrix'
-import type { CreateAccessPayload, UserEsteira, UserVisao } from '@/types/access'
+import type { CreateAccessPayload, UpdateAccessPayload, UserEsteira, UserVisao } from '@/types/access'
 import { parsePermissions } from '@/types/access'
 
 function parseVisao(value: unknown): UserVisao | null {
@@ -196,4 +197,130 @@ export async function DELETE(request: Request) {
   }
 
   return NextResponse.json({ ok: true })
+}
+
+export async function PATCH(request: Request) {
+  const auth = await requireAdminUser()
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
+
+  let body: UpdateAccessPayload
+  try {
+    body = (await request.json()) as UpdateAccessPayload
+  } catch {
+    return NextResponse.json({ error: 'Corpo da requisição inválido.' }, { status: 400 })
+  }
+
+  const userId = body.id?.trim()
+  if (!userId) {
+    return NextResponse.json({ error: 'ID do usuário é obrigatório.' }, { status: 400 })
+  }
+
+  const visao = parseVisao(body.visao)
+  const esteira = parseEsteira(body.esteira)
+  const password = body.password?.trim() ?? ''
+
+  if (password && password.length < 6) {
+    return NextResponse.json({ error: 'A senha deve ter no mínimo 6 caracteres.' }, { status: 400 })
+  }
+
+  if (!visao) {
+    return NextResponse.json({ error: 'Visão inválida.' }, { status: 400 })
+  }
+
+  if (!esteira) {
+    return NextResponse.json({ error: 'Esteira inválida.' }, { status: 400 })
+  }
+
+  const diretoriaIds = Array.isArray(body.diretoriaIds)
+    ? body.diretoriaIds.map(String).filter(Boolean)
+    : []
+
+  let scope: { diretoriaIds: string[]; equipeId: string | null }
+
+  try {
+    const org = await getCachedOrgStructure().catch(() => null)
+    scope = validateAccessScope(
+      {
+        visao,
+        diretoriaIds,
+        equipeId: body.equipeId,
+      },
+      org?.diretorias ?? []
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Escopo de acesso inválido.'
+    return NextResponse.json({ error: message }, { status: 400 })
+  }
+
+  const permissions = parsePermissions(body.permissions)
+  const authRole = visao === 'admin' ? 'admin' : 'user'
+  const effectivePermissions = authRole === 'admin' ? [] : permissions
+
+  const admin = createAdminClient()
+
+  const { data: existingUser, error: fetchError } = await admin.auth.admin.getUserById(userId)
+  if (fetchError || !existingUser.user) {
+    return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 })
+  }
+
+  const username =
+    (existingUser.user.user_metadata?.username as string | undefined) ??
+    emailToUsername(existingUser.user.email ?? '') ??
+    'usuario'
+
+  const { error: updateAuthError } = await admin.auth.admin.updateUserById(userId, {
+    ...(password ? { password } : {}),
+    app_metadata: {
+      role: authRole,
+      visao,
+      esteira,
+      diretoria_ids: scope.diretoriaIds,
+      equipe_id: scope.equipeId,
+      permissions: effectivePermissions,
+    },
+  })
+
+  if (updateAuthError) {
+    return NextResponse.json(
+      { error: getErrorMessage(updateAuthError, 'Erro ao atualizar usuário.') },
+      { status: 500 }
+    )
+  }
+
+  const { error: profileError } = await admin.from('profiles').upsert(
+    {
+      id: userId,
+      username,
+      role: authRole,
+      visao,
+      esteira,
+      diretoria_ids: scope.diretoriaIds,
+      equipe_id: scope.equipeId,
+      permissions: effectivePermissions,
+    },
+    { onConflict: 'id' }
+  )
+
+  if (profileError) {
+    return NextResponse.json(
+      { error: getErrorMessage(profileError, 'Erro ao salvar perfil do usuário.') },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({
+    profile: {
+      id: userId,
+      username,
+      role: authRole,
+      visao,
+      esteira,
+      diretoria_ids: scope.diretoriaIds,
+      equipe_id: scope.equipeId,
+      permissions: effectivePermissions,
+      created_at: existingUser.user.created_at,
+    },
+  })
 }

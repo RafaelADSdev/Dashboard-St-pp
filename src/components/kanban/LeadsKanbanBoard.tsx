@@ -525,7 +525,7 @@ function KanbanColumn({
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === 'dark'
   const stageColor = getStageChartColor(stageIndex)
-  const columnBase = isDark ? '#1e293b' : '#ffffff'
+  const columnBase = isDark ? '#1e293b' : '#f5f5f5'
   const columnBodyTint = withAlpha(stageColor, isDark ? 0.1 : 0.03)
 
   const { setNodeRef, isOver } = useDroppable({

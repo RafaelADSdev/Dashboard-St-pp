@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { RoletaMembershipSummary, StuppRoletaOption } from '@/api/types'
+import { STUPP_ROLETAS_QUERY_KEY } from '@/lib/queryKeys'
 
 export interface StuppRoletasCatalog {
   roletas: StuppRoletaOption[]
@@ -21,9 +22,10 @@ async function fetchStuppRoletasCatalog(): Promise<StuppRoletasCatalog> {
 
 export function useStuppRoletasCatalog() {
   return useQuery({
-    queryKey: ['stupp-roletas', 'v8'],
+    queryKey: STUPP_ROLETAS_QUERY_KEY,
     queryFn: fetchStuppRoletasCatalog,
     staleTime: 1000 * 60 * 60 * 24,
+    retry: 0,
   })
 }
 

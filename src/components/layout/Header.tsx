@@ -42,7 +42,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-end gap-4 border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/80 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 flex items-center justify-end gap-4 border-b border-indigo/10 bg-[#f5f5f5]/95 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-indigo/80 sm:px-6 lg:px-8">
       <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle />
         <button
@@ -52,21 +52,21 @@ export function Header() {
           className={clsx(
             'relative inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
             filtersOpen || hasActiveFilters
-              ? 'bg-blue-50 text-blue-950 dark:bg-blue-950/50 dark:text-blue-100'
-              : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+              ? 'bg-black/6 text-indigo dark:bg-sidebar-active dark:text-cream'
+              : 'text-indigo/80 hover:bg-black/5 hover:text-indigo dark:text-cream/80 dark:hover:bg-sidebar-hover dark:hover:text-cream'
           )}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Filtros
           {(hasPending || hasActiveFilters) && (
-            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-blue-600 ring-2 ring-white dark:ring-slate-900" />
+            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-brand-600 ring-2 ring-[#f5f5f5] dark:ring-indigo" />
           )}
         </button>
         <ExportButton />
         <button
           type="button"
           onClick={handleRefresh}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-900 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-950"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-cream transition-colors hover:bg-brand-700"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Atualizar</span>
@@ -74,7 +74,7 @@ export function Header() {
         <button
           type="button"
           onClick={handleLogout}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-indigo/70 transition-colors hover:bg-black/5 hover:text-indigo dark:text-cream/70 dark:hover:bg-sidebar-hover dark:hover:text-cream"
           title="Sair"
         >
           <LogOut className="h-3.5 w-3.5" />

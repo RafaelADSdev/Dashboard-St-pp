@@ -65,9 +65,13 @@ export function DashboardPage() {
             <FilterApplyingOverlay isActive={isApplyingFilters}>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <KPICard label="Total de leads" value={data?.totalLeads ?? 0} color="brand" />
-                  <KPICard label="Comercial Econômico" value={data?.economicoCount ?? 0} color="indigo" />
-                  <KPICard label="Comercial Geral" value={data?.geralCount ?? 0} color="emerald" />
+                  <KPICard label="Leads recebidos" value={data?.totalLeads ?? 0} color="brand" />
+                  <KPICard label="Leads perdidos" value={data?.leadsPerdidos ?? 0} color="indigo" />
+                  <KPICard
+                    label="Corretores ativos roleta"
+                    value={data?.corretoresAtivosRoleta ?? 0}
+                    color="emerald"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">

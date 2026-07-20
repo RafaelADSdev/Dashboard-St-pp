@@ -93,6 +93,8 @@ export interface ExportLeadDetail {
 
 export interface LeadsDashboardData {
   totalLeads: number
+  leadsPerdidos: number
+  corretoresAtivosRoleta: number
   economicoCount: number
   geralCount: number
   byTeam: { equipe: string; leads: number }[]

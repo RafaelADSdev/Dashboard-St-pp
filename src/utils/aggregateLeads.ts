@@ -9,6 +9,7 @@ import type { StageCatalog } from '@/api/bitrixStages'
 import {
   groupByStageBreakdown,
   groupByStageOrdered,
+  isLeadInFailureStage,
 } from '@/api/bitrixStages'
 import type {
   BitrixLead,
@@ -76,6 +77,24 @@ export function aggregateLeadsData(
         ? economicoCount
         : geralCount + economicoCount
 
+  const leadsForPerdidos =
+    filters.esteira === 'GERAL'
+      ? funnelGeral
+      : filters.esteira === 'ECONOMICO'
+        ? funnelEconomico
+        : filtered
+
+  const leadsPerdidos = leadsForPerdidos.filter((lead) => {
+    const categoryId = lead.category_id ?? ''
+    const definitions = isEconomicoCategory(categoryId)
+      ? stageCatalog.economico
+      : isGeralCategory(categoryId)
+        ? stageCatalog.geral
+        : [...stageCatalog.geral, ...stageCatalog.economico]
+
+    return isLeadInFailureStage(lead, definitions)
+  }).length
+
   const byDiretoriaFromLeads: DiretoriaSummary[] = org.diretorias.map((diretoria) => {
     const userIds = new Set(diretoria.teams.flatMap((t) => t.userIds))
     const leads = filtered.filter((l) => userIds.has(l.assigned_by_id)).length
@@ -106,6 +125,8 @@ export function aggregateLeadsData(
 
   return {
     totalLeads,
+    leadsPerdidos,
+    corretoresAtivosRoleta: 0,
     economicoCount,
     geralCount,
     byTeam: byTeamFromLeads,

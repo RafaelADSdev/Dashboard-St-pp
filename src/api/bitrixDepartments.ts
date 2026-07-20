@@ -46,6 +46,7 @@ export interface StuppOrgStructure {
 
 import { bitrixPost } from '@/api/bitrixRequest'
 import type { BitrixWebhookRef } from '@/api/bitrix'
+const PAGE_SIZE = 50
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -57,18 +58,19 @@ async function fetchAllPages<T>(
   body: Record<string, unknown> = {}
 ): Promise<T[]> {
   const all: T[] = []
-  let start = 0
+  let start = -1
 
   while (true) {
-    const data = await bitrixPost<{ result: T[]; next?: number }>(webhookUrl, method, {
+    const data = await bitrixPost<{ result: T[] }>(webhookUrl, method, {
       ...body,
       start,
     })
 
-    all.push(...(data.result ?? []))
+    const batch = data.result ?? []
+    all.push(...batch)
 
-    if (data.next === undefined) break
-    start = data.next
+    if (batch.length < PAGE_SIZE) break
+    start = all.length
     await sleep(100)
   }
 
@@ -231,7 +233,8 @@ async function fetchUserNames(
   for (let i = 0; i < userIds.length; i += 50) {
     const chunk = userIds.slice(i, i + 50)
     const data = await bitrixPost<{ result: BitrixUser[] }>(webhookUrl, 'user.get', {
-      filter: { ID: chunk },
+      filter: { '=ID': chunk },
+      start: -1,
     })
 
     for (const user of data.result ?? []) {
@@ -241,6 +244,33 @@ async function fetchUserNames(
   }
 
   return names
+}
+
+async function fetchActiveUsers(webhookUrl: BitrixWebhookRef): Promise<BitrixUser[]> {
+  const users: BitrixUser[] = []
+  let lastId = 0
+
+  while (true) {
+    const data = await bitrixPost<{ result: BitrixUser[] }>(webhookUrl, 'user.get', {
+      filter: {
+        '=ACTIVE': true,
+        ...(lastId > 0 ? { '>ID': lastId } : {}),
+      },
+      sort: 'ID',
+      order: 'ASC',
+      start: -1,
+    })
+
+    const batch = data.result ?? []
+    users.push(...batch)
+
+    if (batch.length < PAGE_SIZE) break
+    lastId = Math.max(...batch.map((user) => Number(user.ID)).filter(Boolean))
+    if (!lastId) break
+    await sleep(100)
+  }
+
+  return users
 }
 
 function isListableTeam(dept: BitrixDepartment, diretoriaIds: Set<string>): boolean {
@@ -353,13 +383,12 @@ export function buildStuppOrgStructure(
 export async function fetchStuppOrgStructure(
   webhookUrl: BitrixWebhookRef = getBitrixWebhookUrl()
 ): Promise<StuppOrgStructure> {
-  const [departments, users] = await Promise.all([
-    fetchAllPages<BitrixDepartment>(webhookUrl, 'department.get'),
-    fetchAllPages<BitrixUser>(webhookUrl, 'user.get', {
-      filter: { ACTIVE: true },
-      select: ['ID', 'NAME', 'LAST_NAME', 'UF_DEPARTMENT'],
-    }),
-  ])
+  const departments = await fetchAllPages<BitrixDepartment>(
+    webhookUrl,
+    'department.get',
+    { sort: 'ID', order: 'ASC' }
+  )
+  const users = await fetchActiveUsers(webhookUrl)
 
   const stuppDeptIds = getDescendantIds(departments, STUPP_SUPERINTENDENCY_ID)
   const headIds = departments
