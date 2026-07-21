@@ -6,7 +6,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -16,11 +15,11 @@ import type { TooltipContentProps } from 'recharts'
 import type { RoletaLeadSummary } from '@/api/types'
 import { isStuppRoletaTitle } from '@/api/bitrixRoletas'
 import { useChartTheme } from '@/hooks/useChartTheme'
-import { getRankingBarColor } from '@/lib/stageColors'
 import { formatNumber } from '@/utils/formatters'
 import { normalizeRoletaLeadSummaries } from '@/utils/roletaLeadSummary'
 import {
   chartEmptyState,
+  chartLegendText,
   chartSectionTitle,
   chartTooltipBody,
   chartTooltipDivider,
@@ -29,6 +28,9 @@ import {
   chartTooltipTitle,
   chartTooltipValue,
 } from './chartUi'
+
+const ATIVO_BAR_COLOR = '#2a3252'
+const PERDIDO_BAR_COLOR = '#dc2626'
 
 const ROleta_PAGE_SIZE = 10
 const LABEL_MAX_CHARS = 32
@@ -113,13 +115,30 @@ function RoletaRankingChart({ data }: { data: RoletaLeadSummary[] }) {
   }
 
   const chartHeight = Math.max(220, visibleData.length * 40)
-  const maxCount = visibleData.reduce((max, item) => Math.max(max, item.count), 0)
 
   return (
     <div>
-      <h3 className={clsx('mb-3', chartSectionTitle)}>
-        Roletas Stüpp com mais leads
-      </h3>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h3 className={chartSectionTitle}>Roletas Stüpp com mais leads</h3>
+        <div className="flex flex-wrap items-center gap-4">
+          <span className={clsx('inline-flex items-center gap-1.5', chartLegendText)}>
+            <span
+              className="inline-block h-2.5 w-6 rounded-sm"
+              style={{ backgroundColor: ATIVO_BAR_COLOR }}
+              aria-hidden
+            />
+            Leads ativos
+          </span>
+          <span className={clsx('inline-flex items-center gap-1.5', chartLegendText)}>
+            <span
+              className="inline-block h-2.5 w-6 rounded-sm"
+              style={{ backgroundColor: PERDIDO_BAR_COLOR }}
+              aria-hidden
+            />
+            Perdidos
+          </span>
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart layout="vertical" data={visibleData} margin={{ top: 0, right: 20, left: 8, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={chart.grid} />
@@ -145,11 +164,21 @@ function RoletaRankingChart({ data }: { data: RoletaLeadSummary[] }) {
             interval={0}
           />
           <Tooltip content={tooltipContent} cursor={{ fill: chart.cursor }} />
-          <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
-            {visibleData.map((item, index) => (
-              <Cell key={index} fill={getRankingBarColor(item.count, maxCount)} />
-            ))}
-          </Bar>
+          <Bar
+            dataKey="ativos"
+            name="Leads ativos"
+            stackId="roleta"
+            fill={ATIVO_BAR_COLOR}
+            maxBarSize={28}
+          />
+          <Bar
+            dataKey="perdidos"
+            name="Perdidos"
+            stackId="roleta"
+            fill={PERDIDO_BAR_COLOR}
+            radius={[0, 6, 6, 0]}
+            maxBarSize={28}
+          />
         </BarChart>
       </ResponsiveContainer>
 
