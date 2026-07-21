@@ -2,6 +2,10 @@
 
 Scripts para atualizar webhooks do Bitrix24 e a camada Supabase na Vercel sem expor tokens no repositório.
 
+Projeto de destino: `auzendegbrs-projects/dashboard-st-pp`. Execute os comandos a
+partir da raiz do repositório `RafaelADSdev/Dashboard-St-pp` e confira o destino
+com `npx vercel env ls` antes de substituir variáveis.
+
 ## Pré-requisitos
 
 ```bash
@@ -28,7 +32,7 @@ O script atualiza `BITRIX_WEBHOOK_URL`, `BITRIX_WEBHOOK_URL_META` e `BITRIX_WEBH
 
 ## Configurar Supabase + sincronização Bitrix → Supabase
 
-O dashboard lê dados operacionais do Supabase. O cron `GET /api/cron/sync-bitrix` usa o webhook Bitrix no servidor para espelhar negócios.
+O dashboard lê dados operacionais do Supabase. O cron `GET /api/cron/sync-bitrix` usa o webhook Bitrix no servidor para espelhar negócios desde `2026-06-01`, excluindo responsáveis fora das diretorias Stüpp nomeadas.
 
 > **Plano Hobby Vercel:** só permite cron **1x/dia** (`0 5 * * *` em `vercel.json`). Para sincronizar a cada 5 minutos, use um cron externo (ex.: cron-job.org) chamando a rota com `Authorization: Bearer CRON_SECRET`. No plano Pro, altere o schedule para `*/5 * * * *`.
 
@@ -68,6 +72,16 @@ curl -H "Authorization: Bearer SEU_CRON_SECRET" \
   "https://dashboard-st-pp.vercel.app/api/cron/sync-bitrix"
 ```
 
+Para reconciliar um intervalo específico sem reiniciar todo o backfill:
+
+```bash
+curl -H "Authorization: Bearer SEU_CRON_SECRET" \
+  "https://dashboard-st-pp.vercel.app/api/cron/sync-bitrix?from=2026-06-07&to=2026-06-13"
+```
+
+O dashboard só aceita datas iguais ou posteriores à `coverage_start` registrada
+em `bitrix_sync_state`. Se o cron falhar, confira `last_error` antes de repetir.
+
 ## Comandos úteis
 
 ```bash
@@ -81,3 +95,6 @@ npm run check:supabase   # valida chaves no .env.local
 
 - Nunca commite URLs de webhook, service role ou `.env.local`
 - Tokens vivem apenas na Vercel e no `.env.local` local (gitignored)
+- `NEXT_PUBLIC_*` pode ir para o navegador; nunca use esse prefixo em `service_role` ou `CRON_SECRET`
+- Passe `NEXT_PUBLIC_SUPABASE_URL` via parâmetro ou `.env.local` nos scripts — não fixe o project ref no repositório
+- `npm run seed:admin` é só para bootstrap local; troque a senha do admin no Supabase após criar e não execute o seed em produção sem revisar o script

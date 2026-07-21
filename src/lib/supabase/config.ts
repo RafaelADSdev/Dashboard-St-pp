@@ -1,14 +1,5 @@
-/** Projeto Supabase Stüpp Dashboard */
-export const SUPABASE_PROJECT_REF = 'hejtayrfskmnekcykvjv'
-
-export const DEFAULT_SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`
-
-function readSupabaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SUPABASE_URL ??
-    process.env.VITE_SUPABASE_URL ??
-    DEFAULT_SUPABASE_URL
-  )
+function readSupabaseUrl(): string | undefined {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
 }
 
 function readSupabaseKey(): string | undefined {
@@ -32,7 +23,11 @@ export function shouldEnforceAuth(): boolean {
 }
 
 export function getSupabaseUrl(): string {
-  return readSupabaseUrl()
+  const url = readSupabaseUrl()
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL não configurado')
+  }
+  return url
 }
 
 export function getSupabasePublishableKey(): string {

@@ -1,5 +1,5 @@
--- Execute no SQL Editor do Supabase (projeto hejtayrfskmnekcykvjv)
--- https://supabase.com/dashboard/project/hejtayrfskmnekcykvjv/sql/new
+-- Execute no SQL Editor do projeto Supabase vinculado ao dashboard.
+-- Painel: supabase.com/dashboard → SQL → New query
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,

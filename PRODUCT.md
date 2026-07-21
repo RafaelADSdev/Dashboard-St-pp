@@ -10,7 +10,7 @@ Gestores e superintendência comercial da Stüpp/HubON. Usam o painel durante o 
 
 ## Product Purpose
 
-Dashboard operacional que conecta o CRM Bitrix24 à equipe de gestão comercial. Centraliza KPIs de duas esteiras (Geral e Econômico), visualiza o funil de leads, expõe quem está parado com quem há quanto tempo, e permite ações corretivas sem sair do painel (mover fase, transferir corretor, exportar relatório). Sucesso = gestor enxerga o gargalo e age em segundos.
+Dashboard operacional que conecta o CRM Bitrix24 à equipe de gestão comercial. O Supabase sustenta as leituras e filtros do painel; o Bitrix recebe as ações corretivas. Centraliza KPIs de duas esteiras (Geral e Econômico), visualiza o funil de leads, expõe quem está parado com quem há quanto tempo e permite mover fase ou transferir corretor sem sair do painel. Sucesso = gestor enxerga o gargalo e age em segundos com dados recentes e consistentes.
 
 ## Brand Personality
 

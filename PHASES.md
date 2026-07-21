@@ -8,6 +8,12 @@
 - [x] Auth Supabase + proxy Bitrix server-side
 - [x] Deploy automático na Vercel
 - [x] README completo
+- [x] Espelho operacional Bitrix no Supabase
+- [x] Dashboard e filtros lendo somente do Supabase
+- [x] Backfill incremental desde 2026-06-01 e reconciliação por intervalo
+- [x] Exclusão do escopo `Outros`/Nascimento
+- [x] Atualização manual Bitrix → Supabase pelo botão para administradores
+- [x] Atualização automática a cada 5 minutos enquanto uma aba administradora estiver aberta
 
 ## 🚧 Fase 1 — Hardening & qualidade (proposta — aguardando priorização)
 - [ ] Endurecer proxy `/api/bitrix/*` (allowlist de métodos; hoje aceita qualquer REST method)
@@ -16,6 +22,9 @@
 - [ ] Testes (Vitest) nos utils críticos (aggregateLeads, leadTiming, buildKanbanBoards)
 - [ ] Revisar RLS/policies do Supabase (profiles só tem SELECT; sem INSERT/UPDATE)
 - [ ] Error boundary / tratamento de erro consistente na UI
+- [ ] Validar `CRON_SECRET` em todos os ambientes da Vercel e redeploy
+- [ ] Configurar sincronização contínua a cada 5 minutos, inclusive com o dashboard fechado, fora do cron Hobby
+- [ ] Criar alerta para `bitrix_sync_state.status = 'error'` ou dados defasados
 
 ## 🔮 Fase 2 — Evolução (ideias)
 - [ ] Observabilidade (Sentry / Vercel Analytics)

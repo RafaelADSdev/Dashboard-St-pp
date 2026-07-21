@@ -5,7 +5,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$CronSecret,
 
-  [string]$SupabaseUrl = "https://hejtayrfskmnekcykvjv.supabase.co",
+  [string]$SupabaseUrl = "",
   [string]$SupabaseAnonKey = "",
   [string]$SupabasePublishableKey = "",
   [string]$SyncStartDate = "2026-06-01",
@@ -14,6 +14,25 @@ param(
 
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $root
+
+if (-not $SupabaseUrl) {
+  $envFile = Join-Path $root ".env.local"
+  if (Test-Path $envFile) {
+    $line = Get-Content $envFile | Where-Object { $_ -match '^NEXT_PUBLIC_SUPABASE_URL=' } | Select-Object -First 1
+    if ($line) {
+      $SupabaseUrl = ($line -split '=', 2)[1].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+
+if (-not $SupabaseUrl) {
+  $SupabaseUrl = $env:NEXT_PUBLIC_SUPABASE_URL
+}
+
+if (-not $SupabaseUrl) {
+  Write-Error "Informe -SupabaseUrl ou defina NEXT_PUBLIC_SUPABASE_URL no .env.local."
+  exit 1
+}
 
 if (-not $SupabaseAnonKey -and -not $SupabasePublishableKey) {
   Write-Error "Informe -SupabaseAnonKey ou -SupabasePublishableKey"

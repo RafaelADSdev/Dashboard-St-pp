@@ -6,14 +6,17 @@ import {
   buildDistributedCacheKey,
   withDistributedCache,
 } from './distributedCache'
+import { getBitrixSyncState } from './supabaseBitrixData'
 
-export function getCachedDashboard(
+export async function getCachedDashboard(
   filters: FilterParams,
   view: DashboardDataView = 'full'
 ) {
+  const syncState = await getBitrixSyncState()
+  const syncVersion = syncState.completed_at ?? 'not-synced'
   const distributedKey = buildDistributedCacheKey(
     'bitrix:dashboard:v27',
-    { filters, view }
+    { filters, view, syncVersion }
   )
 
   return withDistributedCache(

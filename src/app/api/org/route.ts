@@ -11,7 +11,7 @@ export async function GET() {
     const { org } = await getSyncedBitrixMetadata()
     return NextResponse.json(buildOrgPreview(org), {
       headers: {
-        'Cache-Control': 'private, max-age=300, stale-while-revalidate=3600',
+        'Cache-Control': 'private, no-store',
       },
     })
   } catch (error) {

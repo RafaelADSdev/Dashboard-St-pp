@@ -8,8 +8,19 @@ fi
 
 service_role_key="$1"
 cron_secret="$2"
-supabase_url="${3:-https://hejtayrfskmnekcykvjv.supabase.co}"
 sync_start_date="${4:-2026-06-01}"
+
+read_supabase_url_from_env_file() {
+  if [[ -f .env.local ]]; then
+    grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.local | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'"
+  fi
+}
+
+supabase_url="${3:-${NEXT_PUBLIC_SUPABASE_URL:-$(read_supabase_url_from_env_file)}}"
+if [[ -z "$supabase_url" ]]; then
+  echo "Informe SUPABASE_URL como 3º argumento ou defina NEXT_PUBLIC_SUPABASE_URL no .env.local."
+  exit 1
+fi
 sync_overlap_minutes="${BITRIX_SYNC_OVERLAP_MINUTES:-60}"
 publishable_key="${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}"
 anon_key="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"

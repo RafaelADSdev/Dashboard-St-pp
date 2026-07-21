@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import type { FilterParams } from '@/api/types'
-import { DASHBOARD_QUERY_CACHE_SECONDS } from '@/lib/syncConfig'
 import { getCachedDashboard } from '@/lib/server/getCachedDashboard'
 import { bitrixRouteErrorStatus } from '@/lib/server/bitrixPaused'
 
@@ -42,7 +41,7 @@ export async function GET(request: NextRequest) {
     const data = await getCachedDashboard(filters, view)
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': `private, max-age=${DASHBOARD_QUERY_CACHE_SECONDS}, stale-while-revalidate=${DASHBOARD_QUERY_CACHE_SECONDS}`,
+        'Cache-Control': 'private, no-store',
       },
     })
   } catch (error) {

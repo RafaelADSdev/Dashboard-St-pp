@@ -6,6 +6,8 @@ const publishable =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const secret =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY
+const testEmail = process.env.CHECK_SUPABASE_TEST_EMAIL
+const testPassword = process.env.CHECK_SUPABASE_TEST_PASSWORD
 
 function missing(name) {
   console.error(`FALTA: ${name}`)
@@ -26,14 +28,19 @@ if (adminError) {
   process.exit(1)
 }
 
-const client = createClient(url, publishable)
-const { error: loginError } = await client.auth.signInWithPassword({
-  email: 'admin@stupp.dashboard',
-  password: 'admin123',
-})
-if (loginError) {
-  console.error('LOGIN:', loginError.message)
-  process.exit(1)
+if (testEmail && testPassword) {
+  const client = createClient(url, publishable)
+  const { error: loginError } = await client.auth.signInWithPassword({
+    email: testEmail,
+    password: testPassword,
+  })
+  if (loginError) {
+    console.error('LOGIN:', loginError.message)
+    process.exit(1)
+  }
+  console.log('OK — chaves Supabase válidas e login de teste bem-sucedido')
+} else {
+  console.log(
+    'OK — chaves Supabase válidas (teste de login omitido; defina CHECK_SUPABASE_TEST_EMAIL e CHECK_SUPABASE_TEST_PASSWORD para validar credenciais)'
+  )
 }
-
-console.log('OK — chaves Supabase válidas')

@@ -8,16 +8,22 @@ import {
   buildRoletasDashboardFromCatalog,
   mergeCatalogWithLeadCounts,
 } from './buildRoletasData'
-import { fetchSyncedLeads, getSyncedBitrixMetadata } from './supabaseBitrixData'
+import {
+  fetchSyncedLeads,
+  getBitrixSyncState,
+  getSyncedBitrixMetadata,
+} from './supabaseBitrixData'
 import {
   buildDistributedCacheKey,
   withDistributedCache,
 } from './distributedCache'
 
-export function getCachedRoletasDashboard(filters: FilterParams) {
+export async function getCachedRoletasDashboard(filters: FilterParams) {
+  const syncState = await getBitrixSyncState()
+  const syncVersion = syncState.completed_at ?? 'not-synced'
   const distributedKey = buildDistributedCacheKey(
     'bitrix:roletas-dashboard:v8',
-    filters
+    { filters, syncVersion }
   )
 
   return unstable_cache(
@@ -72,6 +78,7 @@ export function getCachedRoletasDashboard(filters: FilterParams) {
       filters.diretoria,
       filters.equipe,
       filters.corretor,
+      syncVersion,
     ],
     { revalidate: DASHBOARD_QUERY_CACHE_SECONDS }
   )()

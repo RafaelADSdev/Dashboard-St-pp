@@ -1,8 +1,10 @@
-import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
+import {
+  mergeEnv,
+  requireServiceRoleKey,
+  requireSupabaseUrl,
+} from './lib/supabase-env.mjs'
 
-const SUPABASE_PROJECT_REF = 'hejtayrfskmnekcykvjv'
-const DEFAULT_SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`
 const USERNAME_EMAIL_DOMAIN = 'stupp.dashboard'
 
 function usernameToEmail(username) {
@@ -11,32 +13,18 @@ function usernameToEmail(username) {
   return `${normalized}@${USERNAME_EMAIL_DOMAIN}`
 }
 
-function loadEnvFile(path) {
-  try {
-    const content = readFileSync(path, 'utf8')
-    const env = {}
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith('#')) continue
-      const eq = trimmed.indexOf('=')
-      if (eq === -1) continue
-      const key = trimmed.slice(0, eq).trim()
-      let value = trimmed.slice(eq + 1).trim()
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1)
-      }
-      env[key] = value
-    }
-    return env
-  } catch {
-    return {}
+function parseArgs(argv) {
+  const force = argv.includes('--force')
+  const positional = argv.filter((arg) => !arg.startsWith('--'))
+  return {
+    force,
+    username: positional[0]?.trim().toLowerCase(),
+    password: positional[1],
+    role: positional[2]?.trim().toLowerCase() || 'admin',
   }
 }
 
-async function ensureUser(supabase, { username, password, role }) {
+async function ensureUser(supabase, { username, password, role }, force) {
   const email = usernameToEmail(username)
   const isAdmin = role === 'admin'
 
@@ -58,14 +46,19 @@ async function ensureUser(supabase, { username, password, role }) {
     : { role: 'user' }
 
   if (found) {
-    const { data, error } = await supabase.auth.admin.updateUserById(found.id, {
-      password,
+    const updates = {
       email_confirm: true,
       app_metadata: appMetadata,
       user_metadata: { username },
-    })
+    }
+
+    if (force) {
+      updates.password = password
+    }
+
+    const { data, error } = await supabase.auth.admin.updateUserById(found.id, updates)
     if (error) throw error
-    return { action: 'updated', userId: data.user.id }
+    return { action: force ? 'updated' : 'exists', userId: data.user.id }
   }
 
   const { data, error } = await supabase.auth.admin.createUser({
@@ -102,51 +95,37 @@ async function ensureProfile(supabase, userId, username, role) {
 }
 
 async function main() {
-  const username = process.argv[2]?.trim().toLowerCase()
-  const password = process.argv[3]
-  const role = process.argv[4]?.trim().toLowerCase() || 'admin'
+  const { force, username, password, role } = parseArgs(process.argv.slice(2))
 
   if (!username || !password) {
-    console.error('Uso: node scripts/seed-user.mjs <usuario> <senha> [admin|user]')
+    console.error('Uso: node scripts/seed-user.mjs <usuario> <senha> [admin|user] [--force]')
     process.exit(1)
   }
 
-  if (password.length < 6) {
-    console.error('A senha deve ter no mínimo 6 caracteres.')
+  if (password.length < 8) {
+    console.error('A senha deve ter no mínimo 8 caracteres.')
     process.exit(1)
   }
 
-  const localEnv = loadEnvFile('.env.local')
-  const rootEnv = loadEnvFile('.env')
-
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ??
-    localEnv.NEXT_PUBLIC_SUPABASE_URL ??
-    rootEnv.NEXT_PUBLIC_SUPABASE_URL ??
-    DEFAULT_SUPABASE_URL
-
-  const serviceRoleKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.SUPABASE_SECRET_KEY ??
-    localEnv.SUPABASE_SERVICE_ROLE_KEY ??
-    localEnv.SUPABASE_SECRET_KEY ??
-    rootEnv.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!serviceRoleKey) {
-    console.error('Defina SUPABASE_SERVICE_ROLE_KEY no .env.local.')
-    process.exit(1)
-  }
+  const env = mergeEnv()
+  const url = requireSupabaseUrl(env)
+  const serviceRoleKey = requireServiceRoleKey(env)
 
   const supabase = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  const result = await ensureUser(supabase, { username, password, role })
+  const result = await ensureUser(supabase, { username, password, role }, force)
   await ensureProfile(supabase, result.userId, username, role)
 
-  console.log(
-    `Usuário ${result.action}: "${username}" (${role}) — login com usuário "${username}"`
-  )
+  if (result.action === 'exists') {
+    console.log(
+      `Usuário já existe: "${username}" (${role}) — senha mantida. Use --force para redefinir.`
+    )
+    return
+  }
+
+  console.log(`Usuário ${result.action}: "${username}" (${role})`)
 }
 
 main().catch((error) => {

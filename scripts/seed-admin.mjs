@@ -1,11 +1,12 @@
-import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
+import {
+  mergeEnv,
+  requireServiceRoleKey,
+  requireSupabaseUrl,
+} from './lib/supabase-env.mjs'
 
-const SUPABASE_PROJECT_REF = 'hejtayrfskmnekcykvjv'
-const DEFAULT_SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`
 const USERNAME_EMAIL_DOMAIN = 'stupp.dashboard'
 const ADMIN_USERNAME = 'admin'
-const ADMIN_PASSWORD = 'admin123'
 
 function usernameToEmail(username) {
   const normalized = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '')
@@ -13,32 +14,28 @@ function usernameToEmail(username) {
   return `${normalized}@${USERNAME_EMAIL_DOMAIN}`
 }
 
-function loadEnvFile(path) {
-  try {
-    const content = readFileSync(path, 'utf8')
-    const env = {}
-    for (const line of content.split('\n')) {
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith('#')) continue
-      const eq = trimmed.indexOf('=')
-      if (eq === -1) continue
-      const key = trimmed.slice(0, eq).trim()
-      let value = trimmed.slice(eq + 1).trim()
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1)
-      }
-      env[key] = value
-    }
-    return env
-  } catch {
-    return {}
-  }
+function parseArgs(argv) {
+  const force = argv.includes('--force')
+  const password = argv.find((arg) => !arg.startsWith('--'))
+  return { force, password }
 }
 
-async function ensureAdminUser(supabase) {
+function requireAdminPassword(env, argvPassword) {
+  const password = env.SEED_ADMIN_PASSWORD ?? argvPassword
+  if (!password) {
+    console.error(
+      'Defina SEED_ADMIN_PASSWORD no ambiente ou passe a senha como argumento: npm run seed:admin -- "sua-senha"'
+    )
+    process.exit(1)
+  }
+  if (password.length < 8) {
+    console.error('A senha deve ter no mínimo 8 caracteres.')
+    process.exit(1)
+  }
+  return password
+}
+
+async function ensureAdminUser(supabase, password, force) {
   const email = usernameToEmail(ADMIN_USERNAME)
 
   const { data: existing, error: listError } = await supabase.auth.admin.listUsers({
@@ -55,19 +52,24 @@ async function ensureAdminUser(supabase) {
   )
 
   if (found) {
-    const { data, error } = await supabase.auth.admin.updateUserById(found.id, {
-      password: ADMIN_PASSWORD,
+    const updates = {
       email_confirm: true,
       app_metadata: { role: 'admin' },
       user_metadata: { username: ADMIN_USERNAME },
-    })
+    }
+
+    if (force) {
+      updates.password = password
+    }
+
+    const { data, error } = await supabase.auth.admin.updateUserById(found.id, updates)
     if (error) throw error
-    return { action: 'updated', userId: data.user.id }
+    return { action: force ? 'updated' : 'exists', userId: data.user.id }
   }
 
   const { data, error } = await supabase.auth.admin.createUser({
     email,
-    password: ADMIN_PASSWORD,
+    password,
     email_confirm: true,
     app_metadata: { role: 'admin' },
     user_metadata: { username: ADMIN_USERNAME },
@@ -98,41 +100,29 @@ async function ensureAdminProfile(supabase, userId) {
 }
 
 async function main() {
-  const localEnv = loadEnvFile('.env.local')
-  const rootEnv = loadEnvFile('.env')
+  const env = mergeEnv()
+  const { force, password: argvPassword } = parseArgs(process.argv.slice(2))
+  const password = requireAdminPassword(env, argvPassword)
+  const url = requireSupabaseUrl(env)
+  const serviceRoleKey = requireServiceRoleKey(env)
 
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ??
-    process.env.VITE_SUPABASE_URL ??
-    localEnv.NEXT_PUBLIC_SUPABASE_URL ??
-    localEnv.VITE_SUPABASE_URL ??
-    rootEnv.NEXT_PUBLIC_SUPABASE_URL ??
-    rootEnv.VITE_SUPABASE_URL ??
-    DEFAULT_SUPABASE_URL
-
-  const serviceRoleKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    localEnv.SUPABASE_SERVICE_ROLE_KEY ??
-    rootEnv.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!serviceRoleKey) {
-    console.error(
-      'Defina SUPABASE_SERVICE_ROLE_KEY no .env.local (Supabase → Settings → API → service_role).'
-    )
-    process.exit(1)
-  }
-
-  console.log(`Projeto: ${SUPABASE_PROJECT_REF}`)
   console.log(`URL: ${url}`)
 
   const supabase = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  const result = await ensureAdminUser(supabase)
+  const result = await ensureAdminUser(supabase, password, force)
   await ensureAdminProfile(supabase, result.userId)
 
-  console.log(`Admin ${result.action}: usuário "${ADMIN_USERNAME}" / senha "${ADMIN_PASSWORD}"`)
+  if (result.action === 'exists') {
+    console.log(
+      `Admin já existe: usuário "${ADMIN_USERNAME}" (senha mantida). Use --force para redefinir a senha.`
+    )
+    return
+  }
+
+  console.log(`Admin ${result.action}: usuário "${ADMIN_USERNAME}"`)
 }
 
 main().catch((error) => {
