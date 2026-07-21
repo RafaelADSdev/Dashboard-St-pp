@@ -7,7 +7,12 @@ import {
   shouldEnforceAuth,
 } from './config'
 
-const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/auth/logout'])
+const PUBLIC_PATHS = new Set([
+  '/login',
+  '/auth/callback',
+  '/auth/logout',
+  '/api/cron/sync-bitrix',
+])
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.has(pathname)

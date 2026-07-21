@@ -216,6 +216,10 @@ export function formatFunnelBottleneckDescription(bottleneck: FunnelBottleneck |
   return `Gargalo: ${bottleneck.stageName} · ${bottleneck.count} leads (${bottleneck.sharePercent}%)`
 }
 
+export function getLeadsAtivos(totalLeads: number, leadsPerdidos: number): number {
+  return Math.max(0, totalLeads - leadsPerdidos)
+}
+
 export function getLostLeadsKpiAlert(lost: number, total: number): {
   level: OperationalAlertLevel
   hint?: string

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateDealAssigneesBatch } from '@/api/bitrix'
 import { getDealsBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
+import { patchSyncedDealsAssignee } from '@/lib/server/supabaseBitrixData'
 import { requireUserPermission } from '@/lib/supabase/access'
 import { bitrixRouteErrorStatus, isBitrixPaused, BITRIX_PAUSED_MESSAGE } from '@/lib/server/bitrixPaused'
 
@@ -54,6 +55,8 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
+
+    await patchSyncedDealsAssignee(result.succeeded, body.assignedById)
 
     return NextResponse.json(result)
   } catch (error) {

@@ -29,7 +29,12 @@ export function ChartCard({
       <div className="mb-5">
         <h2 className="text-base font-semibold text-indigo dark:text-cream">{title}</h2>
         {description ? (
-          <p className={clsx('mt-0.5 text-xs', chartTooltipMuted, descriptionClassName)}>
+          <p
+            className={clsx(
+              'mt-0.5 text-xs',
+              descriptionClassName ?? chartTooltipMuted
+            )}
+          >
             {description}
           </p>
         ) : null}

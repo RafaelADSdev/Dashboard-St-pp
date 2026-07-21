@@ -1,12 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import type { FilterParams } from '@/api/types'
-import { DASHBOARD_SYNC_SECONDS } from '@/lib/syncConfig'
+import { DASHBOARD_QUERY_CACHE_SECONDS } from '@/lib/syncConfig'
 import { getCachedRoletasDashboard } from '@/lib/server/getCachedRoletasDashboard'
-import {
-  BITRIX_PAUSED_MESSAGE,
-  bitrixRouteErrorStatus,
-  isBitrixPaused,
-} from '@/lib/server/bitrixPaused'
+import { bitrixRouteErrorStatus } from '@/lib/server/bitrixPaused'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -38,18 +34,11 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (isBitrixPaused()) {
-    return NextResponse.json(
-      { error: BITRIX_PAUSED_MESSAGE },
-      { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
-    )
-  }
-
   try {
     const data = await getCachedRoletasDashboard(filters)
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': `private, max-age=${DASHBOARD_SYNC_SECONDS}, stale-while-revalidate=${DASHBOARD_SYNC_SECONDS}`,
+        'Cache-Control': `private, max-age=${DASHBOARD_QUERY_CACHE_SECONDS}, stale-while-revalidate=${DASHBOARD_QUERY_CACHE_SECONDS}`,
       },
     })
   } catch (error) {

@@ -13,10 +13,12 @@ import {
   YAxis,
 } from 'recharts'
 import type { TooltipContentProps } from 'recharts'
-import type { RoletaLeadSummary, SourceLeadSummary } from '@/api/types'
+import type { RoletaLeadSummary } from '@/api/types'
 import { isStuppRoletaTitle } from '@/api/bitrixRoletas'
 import { useChartTheme } from '@/hooks/useChartTheme'
 import { getRankingBarColor } from '@/lib/stageColors'
+import { formatNumber } from '@/utils/formatters'
+import { normalizeRoletaLeadSummaries } from '@/utils/roletaLeadSummary'
 import {
   chartEmptyState,
   chartSectionTitle,
@@ -32,7 +34,6 @@ const ROleta_PAGE_SIZE = 10
 const LABEL_MAX_CHARS = 32
 
 interface Props {
-  bySource: SourceLeadSummary[]
   byRoleta: RoletaLeadSummary[]
 }
 
@@ -41,83 +42,67 @@ function truncateLabel(value: string, maxChars = LABEL_MAX_CHARS): string {
   return `${value.slice(0, maxChars - 1)}…`
 }
 
-function RoletaBreakdownTooltip({ active, payload, label }: TooltipContentProps) {
-  if (!active || !payload?.length) return null
+function createRoletaBreakdownTooltip(dataByRoleta: Map<string, RoletaLeadSummary>) {
+  return function RoletaBreakdownTooltip({ active, payload, label }: TooltipContentProps) {
+    if (!active || !payload?.length) return null
 
-  const item = payload[0]?.payload as RoletaLeadSummary | undefined
-  if (!item) return null
+    const roletaKey = String(label ?? payload[0]?.payload?.roleta ?? '').trim()
+    const item =
+      dataByRoleta.get(roletaKey) ??
+      (payload[0]?.payload as RoletaLeadSummary | undefined)
 
-  return (
-    <div className={clsx('max-w-sm', chartTooltipSurface)}>
-      <p className={clsx('leading-snug', chartTooltipTitle)}>{item.roleta}</p>
-      <p className={clsx('mt-1', chartTooltipMuted)}>
-        Total: <span className={chartTooltipValue}>{item.count}</span>
-      </p>
-      {item.sources.length > 0 && (
+    if (!item) return null
+
+    return (
+      <div className={clsx('max-w-sm', chartTooltipSurface)}>
+        <p className={clsx('leading-snug', chartTooltipTitle)}>{item.roleta}</p>
+        <p className={clsx('mt-1', chartTooltipMuted)}>
+          Total: <span className={chartTooltipValue}>{formatNumber(item.count)}</span>
+        </p>
         <div className={clsx('mt-2', chartTooltipDivider)}>
-          <p className={clsx('mb-1', chartTooltipMuted)}>Origens nesta roleta</p>
-          <ul className="max-h-40 space-y-1 overflow-y-auto">
-            {item.sources.map((entry) => (
-              <li
-                key={entry.source}
-                className={clsx('flex items-center justify-between gap-3', chartTooltipBody)}
-              >
-                <span className="truncate">{entry.source}</span>
-                <span className={clsx('shrink-0', chartTooltipValue)}>{entry.count}</span>
-              </li>
-            ))}
+          <ul className="space-y-1">
+            <li className={clsx('flex items-center justify-between gap-3', chartTooltipBody)}>
+              <span>Leads ativos</span>
+              <span className="shrink-0 font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">
+                {formatNumber(item.ativos)}
+              </span>
+            </li>
+            <li className={clsx('flex items-center justify-between gap-3', chartTooltipBody)}>
+              <span>Leads perdidos</span>
+              <span className="shrink-0 font-semibold tabular-nums text-red-700 dark:text-red-300">
+                {formatNumber(item.perdidos)}
+              </span>
+            </li>
           </ul>
         </div>
-      )}
-    </div>
-  )
-}
-
-function SourceBreakdownTooltip({ active, payload, label }: TooltipContentProps) {
-  if (!active || !payload?.length) return null
-
-  const item = payload[0]?.payload as SourceLeadSummary | undefined
-  if (!item) return null
-
-  const stuppRoletas = item.roletas.filter((entry) => isStuppRoletaTitle(entry.roleta))
-
-  return (
-    <div className={clsx('max-w-sm', chartTooltipSurface)}>
-      <p className={chartTooltipTitle}>{label}</p>
-      <p className={clsx('mt-1', chartTooltipMuted)}>
-        Total: <span className={chartTooltipValue}>{item.count}</span>
-      </p>
-      {stuppRoletas.length > 0 && (
-        <div className={clsx('mt-2', chartTooltipDivider)}>
-          <p className={clsx('mb-1', chartTooltipMuted)}>Roletas Stüpp desta origem</p>
-          <ul className="max-h-40 space-y-1 overflow-y-auto">
-            {stuppRoletas.map((entry) => (
-              <li
-                key={entry.roleta}
-                className={clsx('flex items-center justify-between gap-3', chartTooltipBody)}
-              >
-                <span className="truncate">{entry.roleta}</span>
-                <span className={clsx('shrink-0', chartTooltipValue)}>{entry.count}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
 }
 
 function RoletaRankingChart({ data }: { data: RoletaLeadSummary[] }) {
   const chart = useChartTheme()
   const [showAll, setShowAll] = useState(false)
 
+  const normalizedData = useMemo(() => normalizeRoletaLeadSummaries(data), [data])
+
   const stuppRoletas = useMemo(
-    () => data.filter((item) => isStuppRoletaTitle(item.roleta)),
-    [data]
+    () => normalizedData.filter((item) => isStuppRoletaTitle(item.roleta)),
+    [normalizedData]
   )
 
   const visibleData = showAll ? stuppRoletas : stuppRoletas.slice(0, ROleta_PAGE_SIZE)
   const hasMore = stuppRoletas.length > ROleta_PAGE_SIZE
+
+  const dataByRoleta = useMemo(
+    () => new Map(normalizedData.map((item) => [item.roleta, item])),
+    [normalizedData]
+  )
+
+  const tooltipContent = useMemo(
+    () => createRoletaBreakdownTooltip(dataByRoleta),
+    [dataByRoleta]
+  )
 
   if (stuppRoletas.length === 0) {
     return (
@@ -159,7 +144,7 @@ function RoletaRankingChart({ data }: { data: RoletaLeadSummary[] }) {
             tickLine={false}
             interval={0}
           />
-          <Tooltip content={RoletaBreakdownTooltip} cursor={{ fill: chart.cursor }} />
+          <Tooltip content={tooltipContent} cursor={{ fill: chart.cursor }} />
           <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
             {visibleData.map((item, index) => (
               <Cell key={index} fill={getRankingBarColor(item.count, maxCount)} />
@@ -185,67 +170,19 @@ function RoletaRankingChart({ data }: { data: RoletaLeadSummary[] }) {
   )
 }
 
-function SourceRankingChart({ data }: { data: SourceLeadSummary[] }) {
-  const chart = useChartTheme()
-
-  if (data.length === 0) {
-    return (
-      <p className={clsx('py-6 text-center', chartEmptyState)}>
-        Nenhuma origem encontrada no período.
-      </p>
-    )
-  }
-
-  const chartHeight = Math.max(220, data.length * 34)
-  const maxCount = data.reduce((max, item) => Math.max(max, item.count), 0)
-
-  return (
-    <div>
-      <h3 className={clsx('mb-3', chartSectionTitle)}>
-        Origens de captação
-      </h3>
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <BarChart layout="vertical" data={data} margin={{ top: 0, right: 20, left: 8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={chart.grid} />
-          <XAxis type="number" tick={{ fontSize: 11, fill: chart.tick }} axisLine={false} tickLine={false} />
-          <YAxis
-            type="category"
-            dataKey="source"
-            tick={{ fontSize: 11, fill: chart.tickSecondary }}
-            width={168}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip content={SourceBreakdownTooltip} cursor={{ fill: chart.cursor }} />
-          <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]} maxBarSize={28}>
-            {data.map((item, index) => (
-              <Cell key={index} fill={getRankingBarColor(item.count, maxCount)} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-export function LeadsBySourceChart({ bySource, byRoleta }: Props) {
+export function LeadsBySourceChart({ byRoleta }: Props) {
   const stuppRoletas = useMemo(
     () => byRoleta.filter((item) => isStuppRoletaTitle(item.roleta)),
     [byRoleta]
   )
 
-  if (bySource.length === 0 && stuppRoletas.length === 0) {
+  if (stuppRoletas.length === 0) {
     return (
       <p className={clsx('py-8 text-center', chartEmptyState)}>
-        Nenhuma origem ou roleta Stüpp encontrada no período.
+        Nenhuma roleta Stüpp encontrada no período.
       </p>
     )
   }
 
-  return (
-    <div className="space-y-8">
-      <RoletaRankingChart data={byRoleta} />
-      <SourceRankingChart data={bySource} />
-    </div>
-  )
+  return <RoletaRankingChart data={byRoleta} />
 }

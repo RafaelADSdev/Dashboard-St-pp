@@ -99,13 +99,10 @@ export function EsteiraGeralPage() {
                 </div>
 
                 <ChartCard
-                  title="Leads por origem e roleta"
-                  description="Veja de qual fonte veio o lead e em qual roleta ele entrou no período"
+                  title="Leads por roleta"
+                  description="Volume por roleta Stüpp no período — passe o mouse para ver ativos e perdidos"
                 >
-                  <LeadsBySourceChart
-                    bySource={data?.bySource ?? []}
-                    byRoleta={data?.byRoleta ?? []}
-                  />
+                  <LeadsBySourceChart byRoleta={data?.byRoleta ?? []} />
                 </ChartCard>
               </div>
             </FilterApplyingOverlay>

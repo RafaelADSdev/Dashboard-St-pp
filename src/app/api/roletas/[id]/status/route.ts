@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
-import { updateRoletaStatus } from '@/api/bitrixRoletaMutations'
+import {
+  resolveBitrixStageIdForStatus,
+  updateRoletaStatus,
+} from '@/api/bitrixRoletaMutations'
 import type { RoletaOperationalStatus } from '@/lib/roletaStatus'
 import { requireUserPermission } from '@/lib/supabase/access'
 import { getMetaBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
 import { invalidateDistributedRoletasCatalog } from '@/lib/server/cachedBitrix'
+import { patchSyncedRoletaStatus } from '@/lib/server/supabaseBitrixData'
 import {
   BITRIX_PAUSED_MESSAGE,
   bitrixRouteErrorStatus,
@@ -52,6 +56,11 @@ export async function POST(
     }
 
     await updateRoletaStatus(webhookUrl, id, body.status)
+    await patchSyncedRoletaStatus(
+      id,
+      body.status,
+      resolveBitrixStageIdForStatus(body.status)
+    )
     await invalidateDistributedRoletasCatalog()
     revalidateTag('stupp-roletas-catalog', 'max')
 

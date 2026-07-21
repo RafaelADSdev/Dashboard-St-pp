@@ -456,6 +456,68 @@ export async function fetchLeadsFromBitrix(
     )
 }
 
+/**
+ * Busca incremental para o espelho do Supabase. Diferente da consulta do
+ * dashboard, o recorte é por DATE_MODIFY para também capturar mudanças em
+ * negócios que entraram na esteira antes da janela atual.
+ */
+export async function fetchLeadsModifiedFromBitrix(
+  webhookUrl: BitrixWebhookRef,
+  params: {
+    modifiedFrom: string
+    modifiedTo: string
+    categoryIds: string[]
+    userToTeamName?: Record<string, string>
+    userToDiretoriaName?: Record<string, string>
+    userNames?: Record<string, string>
+  }
+): Promise<BitrixLead[]> {
+  const rawByCategory: BitrixDealRaw[][] = []
+
+  for (const categoryId of params.categoryIds) {
+    rawByCategory.push(
+      await fetchDealPagesForFilter(
+        webhookUrl,
+        {
+          dateFrom: params.modifiedFrom,
+          dateTo: params.modifiedTo,
+          categoryIds: [categoryId],
+        },
+        {
+          '>=DATE_MODIFY': params.modifiedFrom,
+          '<=DATE_MODIFY': params.modifiedTo,
+        },
+        DEFAULT_DEAL_LIST_SELECT
+      )
+    )
+    if (params.categoryIds.length > 1) await sleep(150)
+  }
+
+  const allDeals = dedupeDeals(rawByCategory.flat())
+  const userNames = { ...(params.userNames ?? {}) }
+  const missingUserIds = new Set<string>()
+
+  for (const deal of allDeals) {
+    for (const rawId of [deal.ASSIGNED_BY_ID, deal.MODIFY_BY_ID]) {
+      const userId = String(rawId ?? '')
+      if (userId && !userNames[userId]) missingUserIds.add(userId)
+    }
+  }
+
+  Object.assign(userNames, await fetchUserNames(webhookUrl, [...missingUserIds]))
+
+  return allDeals
+    .map((deal) =>
+      normalizeDeal(
+        deal,
+        userNames,
+        params.userToTeamName ?? {},
+        params.userToDiretoriaName ?? {}
+      )
+    )
+    .filter((lead) => Boolean(lead.id && lead.date_arrived))
+}
+
 export async function fetchRoletaDealSnapshots(
   webhookUrl: BitrixWebhookRef,
   params: DealQueryParams & { sequentialCategories?: boolean }

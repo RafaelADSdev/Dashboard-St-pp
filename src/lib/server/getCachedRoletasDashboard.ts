@@ -1,14 +1,14 @@
 import { unstable_cache } from 'next/cache'
 import type { FilterParams } from '@/api/types'
 import { getCategoryIdsForEsteira } from '@/api/bitrixConfig'
-import { DASHBOARD_SYNC_SECONDS } from '@/lib/syncConfig'
+import { DASHBOARD_QUERY_CACHE_SECONDS } from '@/lib/syncConfig'
+import { resolveAssignedByIds } from '@/lib/orgPreview'
 import {
+  aggregateRoletasStats,
   buildRoletasDashboardFromCatalog,
-  buildRoletasLeadCounts,
   mergeCatalogWithLeadCounts,
 } from './buildRoletasData'
-import { getDealsBitrixWebhookCandidates, hasSplitBitrixWebhooks } from './bitrixWebhook'
-import { getCachedOrgStructure, getCachedStuppRoletasCatalog } from './cachedBitrix'
+import { fetchSyncedLeads, getSyncedBitrixMetadata } from './supabaseBitrixData'
 import {
   buildDistributedCacheKey,
   withDistributedCache,
@@ -24,12 +24,9 @@ export function getCachedRoletasDashboard(filters: FilterParams) {
     async () =>
       withDistributedCache(
         distributedKey,
-        DASHBOARD_SYNC_SECONDS,
+        DASHBOARD_QUERY_CACHE_SECONDS,
         async () => {
-          const [roletas, org] = await Promise.all([
-            getCachedStuppRoletasCatalog(),
-            getCachedOrgStructure(),
-          ])
+          const { roletasCatalog: roletas, org } = await getSyncedBitrixMetadata()
 
           const catalogDashboard = buildRoletasDashboardFromCatalog(roletas)
 
@@ -37,13 +34,28 @@ export function getCachedRoletasDashboard(filters: FilterParams) {
             return catalogDashboard
           }
 
-          const leadCounts = await buildRoletasLeadCounts(
-            getDealsBitrixWebhookCandidates(),
+          const assignedByIds = resolveAssignedByIds(org, {
+            diretoria: filters.diretoria,
+            equipe: filters.equipe,
+            corretor: filters.corretor,
+          })
+          const hasUserFilter = Boolean(filters.equipe || filters.diretoria || filters.corretor)
+          const leads = await fetchSyncedLeads(
             filters,
-            org,
-            roletas,
             getCategoryIdsForEsteira('TODAS'),
-            !hasSplitBitrixWebhooks()
+            org,
+            { assignedByIds: hasUserFilter ? assignedByIds : undefined }
+          )
+          const leadCounts = aggregateRoletasStats(
+            roletas,
+            leads.map((lead) => ({
+              assigned_by_id: lead.assigned_by_id,
+              category_id: lead.category_id,
+              roleta: lead.roleta,
+            })),
+            new Set(assignedByIds),
+            assignedByIds,
+            filters
           )
 
           return {
@@ -61,6 +73,6 @@ export function getCachedRoletasDashboard(filters: FilterParams) {
       filters.equipe,
       filters.corretor,
     ],
-    { revalidate: DASHBOARD_SYNC_SECONDS }
+    { revalidate: DASHBOARD_QUERY_CACHE_SECONDS }
   )()
 }

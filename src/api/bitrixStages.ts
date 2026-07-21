@@ -1,3 +1,5 @@
+import { isEconomicoCategory, isGeralCategory } from '@/api/bitrixConfig'
+
 export interface BitrixStageDefinition {
   statusId: string
   name: string
@@ -189,6 +191,39 @@ function resolveLostStageDefinitions(
     const name = normalizeStageName(stage.name)
     return name.includes('negocios perdidos') || name.includes('perdido')
   })
+}
+
+export function isLeadInLostKpiStage(
+  lead: { stage_id: string; category_id?: string },
+  catalog: StageCatalog,
+  economicoCategoryId: string,
+  geralCategoryId: string
+): boolean {
+  const categoryId = String(lead.category_id ?? '')
+
+  if (isEconomicoCategory(categoryId)) {
+    const lostDefinitions = resolveLostStageDefinitions(
+      catalog.economico,
+      LOST_KPI_STAGE_NAME_ECONOMICO,
+      'economico'
+    )
+    return lostDefinitions.some((stage) =>
+      stageIdsMatch(stage.statusId, lead.stage_id, economicoCategoryId)
+    )
+  }
+
+  if (isGeralCategory(categoryId)) {
+    const lostDefinitions = resolveLostStageDefinitions(
+      catalog.geral,
+      LOST_KPI_STAGE_NAME_GERAL,
+      'geral'
+    )
+    return lostDefinitions.some((stage) =>
+      stageIdsMatch(stage.statusId, lead.stage_id, geralCategoryId)
+    )
+  }
+
+  return false
 }
 
 export function countLostLeadsInPipeline(

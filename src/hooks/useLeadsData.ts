@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { FilterParams, LeadsDashboardData } from '@/api/types'
 import { DASHBOARD_SYNC_MS } from '@/lib/syncConfig'
+import { normalizeRoletaLeadSummaries } from '@/utils/roletaLeadSummary'
 
 const CLIENT_FETCH_TIMEOUT_MS = 5 * 60_000
 
@@ -45,11 +46,15 @@ async function fetchDashboard(
       throw new Error(await parseApiError(res, 'Erro ao carregar dados do dashboard'))
     }
 
-    return res.json()
+    const data = (await res.json()) as LeadsDashboardData
+    return {
+      ...data,
+      byRoleta: normalizeRoletaLeadSummaries(data.byRoleta ?? []),
+    }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error(
-        'A consulta ao Bitrix demorou demais. Tente um período menor ou configure webhooks separados.'
+        'A consulta aos dados demorou demais. Tente novamente ou use um período menor.'
       )
     }
     throw error
@@ -66,7 +71,7 @@ export function useLeadsData(
   const merged = filters ? { ...filters, ...overrides } : null
 
   return useQuery({
-    queryKey: ['leads', view, merged],
+    queryKey: ['leads', 'v26', view, merged],
     enabled: Boolean(merged?.dateFrom && merged?.dateTo),
     queryFn: () => fetchDashboard(merged!, view),
     placeholderData: keepPreviousData,

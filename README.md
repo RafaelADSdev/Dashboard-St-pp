@@ -334,6 +334,42 @@ npm run seed:admin # Cria usuário admin no Supabase
 
 ---
 
+## Sincronização Bitrix → Supabase
+
+O dashboard lê os dados operacionais somente do Supabase. A rota protegida
+`GET /api/cron/sync-bitrix` atualiza o espelho a cada 5 minutos pelo Vercel Cron.
+
+1. Aplique as migrations de `supabase/migrations/` no projeto Supabase.
+2. Configure `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` e `BITRIX_SYNC_START_DATE`.
+3. Faça o deploy. Para iniciar a sincronização manualmente sem esperar o cron:
+
+```bash
+curl -H "Authorization: Bearer SEU_CRON_SECRET" \
+  "https://seu-dominio/api/cron/sync-bitrix"
+```
+
+A sincronização mantém os dados recentes atualizados e faz o histórico desde
+`BITRIX_SYNC_START_DATE` em janelas de até sete dias. O cursor fica salvo em
+`bitrix_sync_state.details`, então cada execução de 5 minutos continua do ponto
+anterior sem repetir toda a carga. A cobertura exibida ao dashboard só muda para
+a data inicial quando não houver lacunas no período. Use `?full=1` apenas para
+reiniciar o cursor do backfill.
+
+Para conferir novamente um intervalo histórico depois de mudanças de responsável
+ou da estrutura organizacional, use a reconciliação protegida:
+
+```bash
+curl -H "Authorization: Bearer SEU_CRON_SECRET" \
+  "https://seu-dominio/api/cron/sync-bitrix?from=2026-06-07&to=2026-06-13"
+```
+
+Ela relê o período no Bitrix, mantém somente responsáveis das diretorias Stüpp
+nomeadas e atualiza apenas o espelho do Supabase. Negócios classificados como
+`Outros` não entram no dashboard.
+
+Os filtros enviados pelo front continuam iguais; `/api/dashboard` os aplica nas
+consultas ao Supabase e mantém o mesmo contrato JSON usado pela interface.
+
 ## Deploy na Vercel
 
 1. Conecte o repositório à [Vercel](https://vercel.com/)

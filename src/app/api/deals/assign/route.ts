@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateDealAssignee } from '@/api/bitrix'
 import { getDealsBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
+import { patchSyncedDeal } from '@/lib/server/supabaseBitrixData'
 import { requireUserPermission } from '@/lib/supabase/access'
 import { bitrixRouteErrorStatus, isBitrixPaused, BITRIX_PAUSED_MESSAGE } from '@/lib/server/bitrixPaused'
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     }
 
     await updateDealAssignee(webhookUrl, body.dealId, body.assignedById)
+    await patchSyncedDeal(body.dealId, { assigned_by_id: body.assignedById })
     return NextResponse.json({ ok: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao transferir negociação'

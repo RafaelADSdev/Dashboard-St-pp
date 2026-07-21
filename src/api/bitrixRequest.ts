@@ -125,11 +125,31 @@ export async function bitrixPost<T>(
     throw new Error('Nenhum webhook Bitrix configurado')
   }
 
-  const webhookUrl = rotateWebhookCandidates(candidates)[0]
-  const execute = () =>
-    bitrixPostOnce<T>(webhookUrl, method, body, Math.min(retries, BITRIX_MAX_RETRIES))
+  const orderedCandidates = rotateWebhookCandidates(candidates)
+  const readMethod = isReadMethod(method)
+  const execute = async () => {
+    const attempts = readMethod ? orderedCandidates : orderedCandidates.slice(0, 1)
+    let lastError: unknown
 
-  if (!isReadMethod(method)) {
+    for (const webhookUrl of attempts) {
+      try {
+        return await bitrixPostOnce<T>(
+          webhookUrl,
+          method,
+          body,
+          Math.min(retries, BITRIX_MAX_RETRIES)
+        )
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('Falha ao consultar os webhooks do Bitrix')
+  }
+
+  if (!readMethod) {
     return execute()
   }
 

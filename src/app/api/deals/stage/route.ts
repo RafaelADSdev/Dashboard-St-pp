@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { updateDealStage } from '@/api/bitrix'
 import { getDealsBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
+import { patchSyncedDeal } from '@/lib/server/supabaseBitrixData'
 import { requireUserPermission } from '@/lib/supabase/access'
 import { bitrixRouteErrorStatus, isBitrixPaused, BITRIX_PAUSED_MESSAGE } from '@/lib/server/bitrixPaused'
 
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
     }
 
     await updateDealStage(webhookUrl, body.dealId, body.stageId)
+    await patchSyncedDeal(body.dealId, { stage_id: body.stageId })
     return NextResponse.json({ ok: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro ao atualizar fase'

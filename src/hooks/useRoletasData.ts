@@ -41,7 +41,7 @@ async function fetchRoletasStats(filters: FilterParams): Promise<RoletasDashboar
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error(
-        'A consulta ao Bitrix demorou demais. Tente um período menor ou configure webhooks separados.'
+        'A consulta aos dados demorou demais. Tente novamente ou use um período menor.'
       )
     }
     throw error

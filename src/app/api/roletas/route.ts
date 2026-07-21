@@ -1,37 +1,22 @@
 import { NextResponse } from 'next/server'
-import {
-  getCachedOrgStructure,
-  getCachedRoletaCorretoresMembership,
-  getCachedStuppRoletasCatalog,
-} from '@/lib/server/cachedBitrix'
+import { getSyncedBitrixMetadata } from '@/lib/server/supabaseBitrixData'
 import { collectMembershipLiderancaOptions } from '@/api/bitrixRoletaCorretores'
 import {
   filterActiveRoletaCorretores,
   summarizeCorretorScope,
 } from '@/utils/filterRoletaCorretores'
-import {
-  BITRIX_PAUSED_MESSAGE,
-  bitrixRouteErrorStatus,
-  isBitrixPaused,
-} from '@/lib/server/bitrixPaused'
+import { bitrixRouteErrorStatus } from '@/lib/server/bitrixPaused'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET() {
-  if (isBitrixPaused()) {
-    return NextResponse.json(
-      { error: BITRIX_PAUSED_MESSAGE },
-      { status: bitrixRouteErrorStatus(BITRIX_PAUSED_MESSAGE) }
-    )
-  }
-
   try {
-    const [roletas, membershipData, org] = await Promise.all([
-      getCachedStuppRoletasCatalog(),
-      getCachedRoletaCorretoresMembership(),
-      getCachedOrgStructure(),
-    ])
+    const {
+      roletasCatalog: roletas,
+      roletaMembership: membershipData,
+      org,
+    } = await getSyncedBitrixMetadata()
 
     const activeStuppUserIds = new Set(org.allUserIds)
 

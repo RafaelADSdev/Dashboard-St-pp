@@ -80,12 +80,14 @@ export interface SourceLeadSummary {
 export interface RoletaLeadSummary {
   roleta: string
   count: number
-  sources: { source: string; count: number }[]
+  perdidos: number
+  ativos: number
 }
 
 export interface LeadsDashboardData {
   totalLeads: number
   leadsPerdidos: number
+  leadsAtivos: number
   corretoresAtivosRoleta: number
   economicoCount: number
   geralCount: number

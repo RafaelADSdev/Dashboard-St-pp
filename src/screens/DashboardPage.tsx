@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { Activity } from 'lucide-react'
 import { useAppliedFilters } from '@/store/filterStore'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { EsteiraFilter } from '@/components/filters/EsteiraFilter'
@@ -24,6 +25,7 @@ import { useFilterApplyFeedback } from '@/hooks/useFilterApplyFeedback'
 import {
   formatFunnelBottleneckDescription,
   getFunnelBottleneck,
+  getLeadsAtivos,
   getLostLeadsKpiAlert,
   KPI_HINT_ALERT_CLASSES,
   KPI_VALUE_ALERT_CLASSES,
@@ -51,6 +53,15 @@ export function DashboardPage() {
   )
   const isApplyingFilters = useFilterApplyFeedback(isFetching || isPending)
   const diretoriaSelected = Boolean(applied?.diretoria)
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : 'Tente aplicar os filtros novamente. Se o erro continuar, atualize a página.'
+
+  const leadsAtivos = useMemo(
+    () => getLeadsAtivos(data?.totalLeads ?? 0, data?.leadsPerdidos ?? 0),
+    [data?.totalLeads, data?.leadsPerdidos]
+  )
 
   const lostLeadsAlert = useMemo(
     () => getLostLeadsKpiAlert(data?.leadsPerdidos ?? 0, data?.totalLeads ?? 0),
@@ -73,12 +84,8 @@ export function DashboardPage() {
 
       <PageShell>
         {isError ? (
-          <ErrorState title="Erro ao carregar dados do Bitrix">
-            {(error as Error)?.message?.includes('pausada temporariamente')
-              ? 'A integração com o Bitrix está pausada para reduzir carga no webhook. Tente novamente mais tarde.'
-              : (error as Error)?.message?.includes('operation time limit')
-                ? 'O Bitrix bloqueou consultas de negociações (limite de operação). Aguarde 15–30 minutos sem usar o dashboard ou ative BITRIX_PAUSED=true na Vercel.'
-                : 'Verifique o webhook no arquivo .env'}
+          <ErrorState title="Não foi possível carregar o dashboard">
+            {errorMessage}
           </ErrorState>
         ) : !data && (isFetching || isPending) ? (
           <LoadingState message="Carregando leads da Superintendência Stüpp..." />
@@ -92,7 +99,7 @@ export function DashboardPage() {
 
             <FilterApplyingOverlay isActive={isApplyingFilters}>
               <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <KPICard label="Leads recebidos" value={data?.totalLeads ?? 0} color="brand" />
                   <KPICard
                     label="Leads perdidos"
@@ -102,6 +109,13 @@ export function DashboardPage() {
                     valueClassName={KPI_VALUE_ALERT_CLASSES[lostLeadsAlert.level]}
                     secondaryHint={lostLeadsAlert.hint}
                     secondaryHintClassName={KPI_HINT_ALERT_CLASSES[lostLeadsAlert.level]}
+                  />
+                  <KPICard
+                    label="Leads ativos"
+                    value={leadsAtivos}
+                    color="amber"
+                    icon={Activity}
+                    secondaryHint="· Recebidos − perdidos"
                   />
                   <KPICard
                     label="Corretores ativos roleta"
@@ -161,13 +175,10 @@ export function DashboardPage() {
                 </div>
 
                 <ChartCard
-                  title="Leads por origem e roleta"
-                  description="Veja de qual fonte veio o lead e em qual roleta ele entrou no período"
+                  title="Leads por roleta"
+                  description="Volume por roleta Stüpp no período — passe o mouse para ver ativos e perdidos"
                 >
-                  <LeadsBySourceChart
-                    bySource={data?.bySource ?? []}
-                    byRoleta={data?.byRoleta ?? []}
-                  />
+                  <LeadsBySourceChart byRoleta={data?.byRoleta ?? []} />
                 </ChartCard>
               </div>
             </FilterApplyingOverlay>

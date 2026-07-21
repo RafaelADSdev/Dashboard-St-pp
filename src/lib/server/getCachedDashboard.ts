@@ -1,6 +1,5 @@
-import { unstable_cache } from 'next/cache'
 import type { FilterParams } from '@/api/types'
-import { DASHBOARD_SYNC_SECONDS } from '@/lib/syncConfig'
+import { DASHBOARD_QUERY_CACHE_SECONDS } from '@/lib/syncConfig'
 import { buildDashboardData } from './buildDashboardData'
 import type { DashboardDataView } from './buildDashboardData'
 import {
@@ -13,28 +12,13 @@ export function getCachedDashboard(
   view: DashboardDataView = 'full'
 ) {
   const distributedKey = buildDistributedCacheKey(
-    'bitrix:dashboard:v22',
+    'bitrix:dashboard:v27',
     { filters, view }
   )
 
-  return unstable_cache(
-    async () =>
-      withDistributedCache(
-        distributedKey,
-        DASHBOARD_SYNC_SECONDS,
-        () => buildDashboardData(filters, view)
-      ),
-    [
-      'dashboard-data-v22',
-      view,
-      filters.dateFrom,
-      filters.dateTo,
-      filters.esteira,
-      filters.diretoria,
-      filters.equipe,
-      filters.corretor,
-      filters.roleta,
-    ],
-    { revalidate: DASHBOARD_SYNC_SECONDS }
-  )()
+  return withDistributedCache(
+    distributedKey,
+    DASHBOARD_QUERY_CACHE_SECONDS,
+    () => buildDashboardData(filters, view)
+  )
 }

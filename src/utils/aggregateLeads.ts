@@ -11,6 +11,7 @@ import {
   countLostLeadsInPipeline,
   groupByStageBreakdown,
   groupByStageOrdered,
+  isLeadInLostKpiStage,
   LOST_KPI_STAGE_NAME_ECONOMICO,
   LOST_KPI_STAGE_NAME_GERAL,
 } from '@/api/bitrixStages'
@@ -31,6 +32,7 @@ import { findDiretoria } from '@/lib/diretoriaScope'
 import { resolveAssignedByIds } from '@/lib/orgPreview'
 import { normalizeRoletaTitleKey } from '@/utils/filterRoletaLeads'
 import { buildKanbanBoards } from '@/utils/buildKanbanBoards'
+import { getLeadsAtivos } from '@/utils/operationalAlert'
 
 export function aggregateLeadsData(
   bitrixLeads: BitrixLead[],
@@ -173,6 +175,7 @@ export function aggregateLeadsData(
   return {
     totalLeads,
     leadsPerdidos,
+    leadsAtivos: getLeadsAtivos(totalLeads, leadsPerdidos),
     corretoresAtivosRoleta: 0,
     economicoCount,
     geralCount,
@@ -183,7 +186,7 @@ export function aggregateLeadsData(
       ? buildByStageForFilter(filtered, filters.esteira, stageCatalog)
       : [],
     bySource: groupBySourceWithRoleta(filtered, sourceLabels, allowedRoletaTitleKeys),
-    byRoleta: groupByRoleta(filtered, sourceLabels, allowedRoletaTitleKeys),
+    byRoleta: groupByRoleta(filtered, stageCatalog, allowedRoletaTitleKeys),
     kanbanBoards: includeOperationalDetails
       ? buildKanbanBoards(filtered, filters.esteira, stageCatalog, sourceLabels)
       : [],
@@ -286,10 +289,10 @@ function groupBySourceWithRoleta(
 
 function groupByRoleta(
   leads: BitrixLead[],
-  sourceLabels: Record<string, string>,
+  stageCatalog: StageCatalog,
   allowedRoletaTitleKeys?: Set<string>
 ): RoletaLeadSummary[] {
-  const byRoleta = new Map<string, Map<string, number>>()
+  const byRoleta = new Map<string, { total: number; perdidos: number }>()
 
   for (const lead of leads) {
     const roletaName = lead.roleta?.trim() || ''
@@ -301,25 +304,23 @@ function groupByRoleta(
       continue
     }
 
-    const sourceName = resolveSourceLabel(lead.source_id, sourceLabels)
-
-    const sourceCounts = byRoleta.get(roletaName) ?? new Map<string, number>()
-    sourceCounts.set(sourceName, (sourceCounts.get(sourceName) ?? 0) + 1)
-    byRoleta.set(roletaName, sourceCounts)
+    const entry = byRoleta.get(roletaName) ?? { total: 0, perdidos: 0 }
+    entry.total += 1
+    if (
+      isLeadInLostKpiStage(lead, stageCatalog, ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID)
+    ) {
+      entry.perdidos += 1
+    }
+    byRoleta.set(roletaName, entry)
   }
 
   return [...byRoleta.entries()]
-    .map(([roleta, sources]) => {
-      const sourceList = [...sources.entries()]
-        .map(([source, count]) => ({ source, count }))
-        .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source, 'pt-BR'))
-
-      return {
-        roleta,
-        count: sourceList.reduce((sum, item) => sum + item.count, 0),
-        sources: sourceList,
-      }
-    })
+    .map(([roleta, { total, perdidos }]) => ({
+      roleta,
+      count: total,
+      perdidos,
+      ativos: getLeadsAtivos(total, perdidos),
+    }))
     .sort((a, b) => b.count - a.count || a.roleta.localeCompare(b.roleta, 'pt-BR'))
 }
 

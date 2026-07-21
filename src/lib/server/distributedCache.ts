@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto'
 const DEFAULT_LOCK_SECONDS = 60
 const LOCK_WAIT_MS = 10_000
 const LOCK_POLL_MS = 250
+const CACHE_OPERATION_TIMEOUT_MS = 3_000
 
 let redisClient: Redis | null | undefined
 
@@ -28,6 +29,18 @@ function getRedis(): Redis | null {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function withTimeout<T>(operation: Promise<T>): Promise<T> {
+  return Promise.race([
+    operation,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error('Tempo limite do cache distribuído excedido')),
+        CACHE_OPERATION_TIMEOUT_MS
+      )
+    ),
+  ])
 }
 
 async function releaseLock(redis: Redis, key: string, token: string): Promise<void> {
@@ -62,7 +75,7 @@ export async function withDistributedCache<T>(
 
   let cached: T | null = null
   try {
-    cached = await redis.get<T>(key)
+    cached = await withTimeout(redis.get<T>(key))
   } catch {
     return loader()
   }
@@ -72,10 +85,12 @@ export async function withDistributedCache<T>(
   const lockToken = randomUUID()
   let acquired: unknown
   try {
-    acquired = await redis.set(lockKey, lockToken, {
-      nx: true,
-      ex: DEFAULT_LOCK_SECONDS,
-    })
+    acquired = await withTimeout(
+      redis.set(lockKey, lockToken, {
+        nx: true,
+        ex: DEFAULT_LOCK_SECONDS,
+      })
+    )
   } catch {
     return loader()
   }
@@ -85,7 +100,7 @@ export async function withDistributedCache<T>(
       const deadline = Date.now() + LOCK_WAIT_MS
       while (Date.now() < deadline) {
         await sleep(LOCK_POLL_MS)
-        const filled = await redis.get<T>(key)
+        const filled = await withTimeout(redis.get<T>(key))
         if (filled !== null && filled !== undefined) return filled
       }
     } catch {
@@ -98,13 +113,13 @@ export async function withDistributedCache<T>(
   try {
     const value = await loader()
     try {
-      await redis.set(key, value, { ex: ttlSeconds })
+      await withTimeout(redis.set(key, value, { ex: ttlSeconds }))
     } catch {
       // A Redis write failure must not discard valid source data.
     }
     return value
   } finally {
-    await releaseLock(redis, lockKey, lockToken).catch(() => undefined)
+    await withTimeout(releaseLock(redis, lockKey, lockToken)).catch(() => undefined)
   }
 }
 

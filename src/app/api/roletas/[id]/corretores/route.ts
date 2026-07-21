@@ -5,9 +5,10 @@ import {
   removeCorretorFromRoleta,
 } from '@/api/bitrixRoletaMutations'
 import {
-  getCachedOrgStructure,
   invalidateDistributedRoletaMembership,
 } from '@/lib/server/cachedBitrix'
+import { getSyncedBitrixMetadata } from '@/lib/server/supabaseBitrixData'
+import { refreshSyncedRoletaMembership } from '@/lib/server/syncBitrixToSupabase'
 import { requireUserPermission } from '@/lib/supabase/access'
 import { getMetaBitrixWebhookCandidates } from '@/lib/server/bitrixWebhook'
 import {
@@ -58,7 +59,7 @@ export async function POST(
       )
     }
 
-    const org = await getCachedOrgStructure()
+    const { org } = await getSyncedBitrixMetadata()
     if (!org.allUserIds.includes(body.corretorUserId)) {
       return NextResponse.json(
         { error: 'Corretor fora da superintendência Stüpp' },
@@ -73,6 +74,7 @@ export async function POST(
     })
 
     await invalidateDistributedRoletaMembership()
+    await refreshSyncedRoletaMembership()
     revalidateTag('stupp-roleta-corretores', 'max')
 
     return NextResponse.json({ ok: true, recordId, roletaId })
@@ -117,6 +119,7 @@ export async function DELETE(
 
     await removeCorretorFromRoleta(webhookUrl, body.recordId)
     await invalidateDistributedRoletaMembership()
+    await refreshSyncedRoletaMembership()
     revalidateTag('stupp-roleta-corretores', 'max')
 
     return NextResponse.json({ ok: true })
