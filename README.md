@@ -4,7 +4,6 @@ Painel operacional para acompanhar negociações, esteiras comerciais e **roleta
 
 | | |
 |---|---|
-| **Produção** | [dashboard-st-pp.vercel.app](https://dashboard-st-pp.vercel.app) |
 | **Repositório** | [RafaelADSdev/Dashboard-St-pp](https://github.com/RafaelADSdev/Dashboard-St-pp) |
 | **Stack** | Next.js 16 · React 19 · Tailwind v4 · Supabase Auth/Postgres · Bitrix24 REST · Vercel |
 
