@@ -16,3 +16,9 @@ Este projeto usa o skill **Impeccable** para decisões de design. Antes de alter
 - Anti-referências: cream pastel dominante, gradientes decorativos, glassmorphism, templates marketplace
 
 **Comandos úteis:** `$impeccable critique <página>`, `$impeccable polish <componente>`, `$impeccable live` (config em `.impeccable/live/config.json`).
+
+## Matriarca (faxina)
+
+Skill pessoal em `~/.cursor/skills/matriarca/`. Invocar com `$matriarca` ou
+"chama a matriarca" antes de commit/PR. Ela varre lixo de código, artefatos
+Cursor/Impeccable e valida o `.gitignore` — não commita sozinha.

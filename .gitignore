@@ -22,6 +22,14 @@ tsconfig.tsbuildinfo
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Cursor / Impeccable / tooling local (não commitar)
+.impeccable/critique/
+.impeccable/live/
+.netlify/
+
+# Artefatos de sessão do agente (se criados no repo)
+agent-transcripts/
 *.suo
 *.ntvs*
 *.njsproj
