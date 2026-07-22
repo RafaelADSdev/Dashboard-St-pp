@@ -24,8 +24,7 @@ tsconfig.tsbuildinfo
 .DS_Store
 
 # Cursor / Impeccable / tooling local (não commitar)
-.impeccable/critique/
-.impeccable/live/
+.impeccable/
 .netlify/
 
 # Artefatos de sessão do agente (se criados no repo)
