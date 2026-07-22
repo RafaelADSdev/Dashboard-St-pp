@@ -13,6 +13,9 @@ import {
   buildRoletaMembershipIndex,
   fetchRoletaCorretorItems,
 } from '@/api/bitrixRoletaCorretores'
+import {
+  fetchRoletaCorretorListItems,
+} from '@/api/bitrixRoletaCorretoresList'
 import { fetchStuppRoletasCatalog } from '@/api/bitrixRoletas'
 import { buildStageLabels, type StageCatalog } from '@/api/bitrixStages'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -250,11 +253,13 @@ async function loadMetadataFromBitrix(): Promise<SyncedBitrixMetadata> {
   const economicoStages = await fetchStageDefinitions(metaWebhooks, ESTEIRA_ECONOMICO_ID)
   const sourceLabels = await fetchSourceLabels(metaWebhooks)
   const roletasCatalog = await fetchStuppRoletasCatalog(metaWebhooks, org)
-  const corretorItems = await fetchRoletaCorretorItems(
-    metaWebhooks,
-    roletasCatalog.map((roleta) => roleta.title)
-  )
-  const membershipIndex = buildRoletaMembershipIndex(corretorItems, org)
+  const roletaTitles = roletasCatalog.map((roleta) => roleta.title)
+  const corretorItems = await fetchRoletaCorretorItems(metaWebhooks, roletaTitles)
+  const listItems = await fetchRoletaCorretorListItems(metaWebhooks, roletaTitles)
+  const membershipIndex = buildRoletaMembershipIndex(corretorItems, org, {
+    listItems,
+    roletas: roletasCatalog.map((roleta) => ({ id: roleta.id, title: roleta.title })),
+  })
   const membershipByRoletaId = attachMembershipToRoletaIds(
     membershipIndex,
     roletasCatalog.map((roleta) => ({ id: roleta.id, title: roleta.title }))
@@ -292,7 +297,17 @@ export async function refreshSyncedRoletaMembership(): Promise<void> {
     metaWebhooks,
     metadata.roletasCatalog.map((roleta) => roleta.title)
   )
-  const membershipIndex = buildRoletaMembershipIndex(corretorItems, metadata.org)
+  const listItems = await fetchRoletaCorretorListItems(
+    metaWebhooks,
+    metadata.roletasCatalog.map((roleta) => roleta.title)
+  )
+  const membershipIndex = buildRoletaMembershipIndex(corretorItems, metadata.org, {
+    listItems,
+    roletas: metadata.roletasCatalog.map((roleta) => ({
+      id: roleta.id,
+      title: roleta.title,
+    })),
+  })
   const membershipByRoletaId = attachMembershipToRoletaIds(
     membershipIndex,
     metadata.roletasCatalog.map((roleta) => ({ id: roleta.id, title: roleta.title }))

@@ -6,6 +6,9 @@ import {
   buildRoletaMembershipIndex,
   fetchRoletaCorretorItems,
 } from '@/api/bitrixRoletaCorretores'
+import {
+  fetchRoletaCorretorListItems,
+} from '@/api/bitrixRoletaCorretoresList'
 import { fetchStuppOrgStructure } from '@/api/bitrixDepartments'
 import { ESTEIRA_ECONOMICO_ID, ESTEIRA_GERAL_ID } from '@/api/bitrixConfig'
 import type { StageCatalog } from '@/api/bitrixStages'
@@ -22,7 +25,7 @@ const CACHE_DAY_SECONDS = 60 * 60 * 24
 export const BITRIX_DISTRIBUTED_CACHE_KEYS = {
   org: 'bitrix:org:v1',
   roletasCatalog: 'bitrix:roletas:catalog:v10',
-  roletaMembership: 'bitrix:roletas:membership:v3',
+  roletaMembership: 'bitrix:roletas:membership:v5',
   stages: 'bitrix:stages:v3',
   sources: 'bitrix:sources:v1',
 } as const
@@ -60,12 +63,14 @@ export const getCachedRoletaCorretoresMembership = unstable_cache(
       async () => {
         const org = await getCachedOrgStructure()
         const roletas = await getCachedStuppRoletasCatalog()
-        const corretorItems = await fetchRoletaCorretorItems(
-          metaWebhooks(),
-          roletas.map((roleta) => roleta.title)
-        )
+        const roletaTitles = roletas.map((roleta) => roleta.title)
+        const corretorItems = await fetchRoletaCorretorItems(metaWebhooks(), roletaTitles)
+        const listItems = await fetchRoletaCorretorListItems(metaWebhooks(), roletaTitles)
 
-        const index = buildRoletaMembershipIndex(corretorItems, org)
+        const index = buildRoletaMembershipIndex(corretorItems, org, {
+          listItems,
+          roletas: roletas.map((roleta) => ({ id: roleta.id, title: roleta.title })),
+        })
         const membershipByRoletaId = attachMembershipToRoletaIds(
           index,
           roletas.map((roleta) => ({ id: roleta.id, title: roleta.title }))

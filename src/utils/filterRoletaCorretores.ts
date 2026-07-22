@@ -27,6 +27,7 @@ export function isCorretorAtivoNoHub(
   corretor: RoletaCorretorMember,
   options: FilterActiveRoletaCorretoresOptions = {}
 ): boolean {
+  if (corretor.ativoNaRoleta === false) return false
   if (isCorretorSemLideranca(corretor)) return false
   if (!corretor.corretorUserId) return false
 

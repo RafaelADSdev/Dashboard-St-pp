@@ -9,6 +9,15 @@ import {
   ROLETA_CORRETOR_ENTITY_TYPE_ID,
 } from '@/api/bitrixRoletaCorretores'
 import {
+  ROLETA_CORRETOR_LIST_CORRETOR_FIELD,
+  ROLETA_CORRETOR_LIST_IBLOCK_ID,
+  ROLETA_CORRETOR_LIST_LINK_FIELD,
+  ROLETA_CORRETOR_LIST_ROLETA_NAME_FIELD,
+  ROLETA_CORRETOR_LIST_STATUS_FIELD,
+  ROLETA_CORRETOR_LIST_STATUS_SIM,
+  ROLETA_CORRETOR_LIST_USER_ID_FIELD,
+} from '@/api/bitrixRoletaCorretoresList'
+import {
   ROLETA_ENTITY_TYPE_ID,
   ROLETA_STAGE_PREFIX,
 } from '@/api/bitrixRoletas'
@@ -52,10 +61,35 @@ export async function updateRoletaStatus(
   })
 }
 
+async function addCorretorToRoletaList(
+  webhookUrl: BitrixWebhookRef,
+  input: {
+    roletaId: string
+    roletaTitle: string
+    corretorUserId: string
+    corretorName: string
+  }
+): Promise<void> {
+  await bitrixPost(webhookUrl, 'lists.element.add', {
+    IBLOCK_TYPE_ID: 'lists',
+    IBLOCK_ID: ROLETA_CORRETOR_LIST_IBLOCK_ID,
+    ELEMENT_CODE: `hub_${input.corretorUserId}_${Date.now()}`,
+    FIELDS: {
+      NAME: input.corretorName,
+      [ROLETA_CORRETOR_LIST_USER_ID_FIELD]: `user_${input.corretorUserId}`,
+      [ROLETA_CORRETOR_LIST_ROLETA_NAME_FIELD]: input.roletaTitle.trim(),
+      [ROLETA_CORRETOR_LIST_CORRETOR_FIELD]: input.corretorUserId,
+      [ROLETA_CORRETOR_LIST_LINK_FIELD]: input.roletaId,
+      [ROLETA_CORRETOR_LIST_STATUS_FIELD]: ROLETA_CORRETOR_LIST_STATUS_SIM,
+    },
+  })
+}
+
 export async function addCorretorToRoleta(
   webhookUrl: BitrixWebhookRef,
   org: StuppOrgStructure,
   input: {
+    roletaId: string
     roletaTitle: string
     corretorUserId: string
     corretorName: string
@@ -80,6 +114,8 @@ export async function addCorretorToRoleta(
   if (id === undefined || id === null) {
     throw new Error('Bitrix não retornou o ID do corretor cadastrado')
   }
+
+  await addCorretorToRoletaList(webhookUrl, input)
 
   return String(id)
 }

@@ -68,6 +68,7 @@ export async function POST(
     }
 
     const recordId = await addCorretorToRoleta(webhookUrl, org, {
+      roletaId,
       roletaTitle: body.roletaTitle.trim(),
       corretorUserId: body.corretorUserId,
       corretorName: body.corretorName.trim(),

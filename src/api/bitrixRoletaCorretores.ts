@@ -1,6 +1,11 @@
 import type { StuppOrgStructure } from '@/api/bitrixDepartments'
 import type { BitrixWebhookRef } from '@/api/bitrix'
 import { bitrixPost } from '@/api/bitrixRequest'
+import {
+  buildLinkedRoletaCorretorEntries,
+  type BitrixRoletaCorretorListItem,
+  type LinkedRoletaCorretorEntry,
+} from '@/api/bitrixRoletaCorretoresList'
 import { isStuppRoletaTitle } from '@/api/bitrixRoletas'
 
 /** SPA Bitrix — aba "Corretores da roleta" (entity type 186). */
@@ -46,6 +51,8 @@ export interface RoletaCorretorMember {
   liderancaId?: string
   liderancaName?: string
   equipe?: string
+  /** Status de Ativo na lista Bitrix "Corretores da Roleta" (false = ocultar no Hub). */
+  ativoNaRoleta?: boolean
 }
 
 export interface RoletaMembership {
@@ -111,6 +118,89 @@ function findTeam(org: StuppOrgStructure, teamId: string) {
     if (team) return team
   }
   return undefined
+}
+
+function enrichCorretorMemberFromListEntry(
+  entry: LinkedRoletaCorretorEntry,
+  org: StuppOrgStructure,
+  userDiretoriaId: Record<string, string>,
+  userLideranca: Record<string, { id: string; name: string }>,
+  entity186RecordId?: string,
+  entity186Extras?: { cargoId?: string; diretorUserId?: string }
+): RoletaCorretorMember {
+  const { corretorUserId } = entry
+  const diretorUserId = entity186Extras?.diretorUserId
+  const cargoId = entity186Extras?.cargoId
+
+  let diretoriaId = userDiretoriaId[corretorUserId]
+  let diretoriaName: string | undefined
+  const equipeId = org.userToTeamId[corretorUserId]
+  const team = equipeId ? findTeam(org, equipeId) : undefined
+  let liderancaId = userLideranca[corretorUserId]?.id
+  const liderancaName = team ? formatLiderancaFilterLabel(team) : undefined
+  const equipe = org.userToTeamName[corretorUserId]
+
+  if (diretoriaId) {
+    diretoriaName = org.diretorias.find((d) => d.id === diretoriaId)?.name
+  }
+
+  if (diretorUserId) {
+    const diretoria = resolveDiretoriaByLeaderId(org, diretorUserId)
+    if (diretoria) {
+      diretoriaId = diretoria.id
+      diretoriaName = diretoria.name
+    }
+  }
+
+  return {
+    recordId: entity186RecordId ?? entry.listElementId,
+    nome: entry.nome,
+    corretorUserId,
+    diretorUserId,
+    cargoId,
+    cargoLabel: cargoId ? ROLETA_CARGO_LABELS[cargoId] : undefined,
+    diretoriaId,
+    diretoriaName,
+    equipeId,
+    liderancaId,
+    liderancaName,
+    equipe,
+    ativoNaRoleta: entry.ativoNaRoleta,
+  }
+}
+
+function buildEntity186Lookup(items: BitrixRoletaCorretorItem[]) {
+  const byKey = new Map<
+    string,
+    { recordId: string; cargoId?: string; diretorUserId?: string }
+  >()
+
+  for (const item of items) {
+    const roletaTitle = normalizeTitle(item[ROLETA_CORRETOR_ROLETA_NAME_FIELD] ?? '')
+    const corretorUserId = item[ROLETA_CORRETOR_USER_FIELD]
+      ? String(item[ROLETA_CORRETOR_USER_FIELD])
+      : undefined
+
+    if (!roletaTitle || !corretorUserId) continue
+
+    const key = `${roletaTitle}::${corretorUserId}`
+    const recordId = String(item.id)
+    const existing = byKey.get(key)
+
+    if (!existing || Number(recordId) > Number(existing.recordId)) {
+      byKey.set(key, {
+        recordId,
+        cargoId: item[ROLETA_CORRETOR_CARGO_FIELD]
+          ? String(item[ROLETA_CORRETOR_CARGO_FIELD])
+          : undefined,
+        diretorUserId: item[ROLETA_CORRETOR_DIRETOR_FIELD]
+          ? String(item[ROLETA_CORRETOR_DIRETOR_FIELD])
+          : undefined,
+      })
+    }
+  }
+
+  return byKey
 }
 
 function enrichCorretorMember(
@@ -219,9 +309,15 @@ export async function fetchRoletaCorretorItems(
   return [...new Map(all.map((item) => [String(item.id), item])).values()]
 }
 
+export interface BuildRoletaMembershipIndexOptions {
+  listItems?: BitrixRoletaCorretorListItem[]
+  roletas?: { id: string; title: string }[]
+}
+
 export function buildRoletaMembershipIndex(
   items: BitrixRoletaCorretorItem[],
-  org: StuppOrgStructure
+  org: StuppOrgStructure,
+  options: BuildRoletaMembershipIndexOptions = {}
 ): {
   byTitle: Map<string, RoletaMembership>
   byRoletaId: Record<string, RoletaMembership>
@@ -230,36 +326,65 @@ export function buildRoletaMembershipIndex(
   const userDiretoriaId = buildUserDiretoriaIdMap(org)
   const userLideranca = buildUserLiderancaMap(org)
   const byTitle = new Map<string, RoletaMembership>()
+  const entity186Lookup = buildEntity186Lookup(items)
 
-  for (const item of items) {
-    const roletaTitle = normalizeTitle(item[ROLETA_CORRETOR_ROLETA_NAME_FIELD] ?? '')
-    if (!roletaTitle || !isStuppRoletaTitle(roletaTitle)) continue
+  if (options.listItems?.length && options.roletas?.length) {
+    const linkedEntries = buildLinkedRoletaCorretorEntries(options.listItems, options.roletas)
 
-    const member = enrichCorretorMember(item, org, userDiretoriaId, userLideranca)
-    if (!member) continue
+    for (const entry of linkedEntries) {
+      const roletaTitle = normalizeTitle(entry.roletaTitle)
+      if (!roletaTitle || !isStuppRoletaTitle(roletaTitle)) continue
 
-    const existing =
-      byTitle.get(roletaTitle) ??
-      ({
-        roletaTitle,
-        corretores: [],
-        diretoriaIds: [],
-        liderancaIds: [],
-        equipeIds: [],
-      } satisfies RoletaMembership)
+      const entity186 = entity186Lookup.get(`${roletaTitle}::${entry.corretorUserId}`)
+      const member = enrichCorretorMemberFromListEntry(
+        entry,
+        org,
+        userDiretoriaId,
+        userLideranca,
+        entity186?.recordId,
+        entity186
+      )
 
-    const duplicate = existing.corretores.some(
-      (entry) =>
-        entry.recordId === member.recordId ||
-        (member.corretorUserId &&
-          entry.corretorUserId === member.corretorUserId &&
-          entry.nome === member.nome)
-    )
-    if (!duplicate) {
+      const existing =
+        byTitle.get(roletaTitle) ??
+        ({
+          roletaTitle,
+          corretores: [],
+          diretoriaIds: [],
+          liderancaIds: [],
+          equipeIds: [],
+        } satisfies RoletaMembership)
+
       existing.corretores.push(member)
+      byTitle.set(roletaTitle, existing)
     }
+  } else {
+    for (const item of items) {
+      const roletaTitle = normalizeTitle(item[ROLETA_CORRETOR_ROLETA_NAME_FIELD] ?? '')
+      if (!roletaTitle || !isStuppRoletaTitle(roletaTitle)) continue
 
-    byTitle.set(roletaTitle, existing)
+      const member = enrichCorretorMember(item, org, userDiretoriaId, userLideranca)
+      if (!member) continue
+
+      const existing =
+        byTitle.get(roletaTitle) ??
+        ({
+          roletaTitle,
+          corretores: [],
+          diretoriaIds: [],
+          liderancaIds: [],
+          equipeIds: [],
+        } satisfies RoletaMembership)
+
+      const duplicate = existing.corretores.some(
+        (corretor) => corretor.corretorUserId === member.corretorUserId
+      )
+      if (!duplicate) {
+        existing.corretores.push(member)
+      }
+
+      byTitle.set(roletaTitle, existing)
+    }
   }
 
   for (const membership of byTitle.values()) {

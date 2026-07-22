@@ -167,6 +167,7 @@ export interface RoletaCorretorMember {
   totalLeads?: number
   geralLeads?: number
   economicoLeads?: number
+  ativoNaRoleta?: boolean
 }
 
 export interface RoletaMembershipSummary {
